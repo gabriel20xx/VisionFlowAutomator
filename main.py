@@ -191,6 +191,10 @@ class MainWindow(QtWidgets.QMainWindow):
         self.btn_edit_step.clicked.connect(self.edit_step)
         self.btn_del_step = QtWidgets.QPushButton('Delete Step')
         self.btn_del_step.clicked.connect(self.delete_step)
+        self.btn_rename_scenario = QtWidgets.QPushButton("Rename Scenario")
+        self.btn_rename_scenario.clicked.connect(self.rename_scenario)
+        self.btn_rename_step = QtWidgets.QPushButton("Rename Step")
+        self.btn_rename_step.clicked.connect(self.rename_step)
         # Start/Stop
         self.btn_start = QtWidgets.QPushButton('Start')
         self.btn_start.clicked.connect(self.start_automation)
@@ -203,11 +207,13 @@ class MainWindow(QtWidgets.QMainWindow):
         layout.addWidget(self.btn_new, 0, 2)
         layout.addWidget(self.btn_import, 0, 3)
         layout.addWidget(self.btn_export, 0, 4)
+        layout.addWidget(self.btn_rename_scenario, 0, 5)
         layout.addWidget(QtWidgets.QLabel('Steps:'), 1, 0)
         layout.addWidget(self.steps_list, 1, 1, 4, 4)
         layout.addWidget(self.btn_add_step, 5, 1)
         layout.addWidget(self.btn_edit_step, 5, 2)
         layout.addWidget(self.btn_del_step, 5, 3)
+        layout.addWidget(self.btn_rename_step, 5, 4)
         layout.addWidget(self.btn_start, 6, 1)
         layout.addWidget(self.btn_stop, 6, 2)
         central = QtWidgets.QWidget()
@@ -271,6 +277,43 @@ class MainWindow(QtWidgets.QMainWindow):
             s.save()
             self.load_scenarios()
             self.combo.setCurrentText(name)
+
+    def rename_scenario(self):
+        if not self.current_scenario:
+            return
+        
+        old_name = self.current_scenario.name
+        new_name, ok = QtWidgets.QInputDialog.getText(self, "Rename Scenario", "New name:", text=old_name)
+        
+        if ok and new_name and new_name != old_name:
+            # Rename the scenario file
+            try:
+                os.rename(os.path.join(CONFIG_DIR, f"{old_name}.json"), os.path.join(CONFIG_DIR, f"{new_name}.json"))
+            except OSError as e:
+                logger.error(f"Error renaming scenario file: {e}")
+                QtWidgets.QMessageBox.critical(self, "Error", f"Could not rename scenario file.\n{e}")
+                return
+
+            # Update the scenario object and save it
+            self.current_scenario.name = new_name
+            self.current_scenario.save()
+            
+            # Refresh the UI
+            self.load_scenarios()
+            self.combo.setCurrentText(new_name)
+
+    def rename_step(self):
+        if not self.current_scenario or self.selected_step_idx is None:
+            return
+
+        step = self.current_scenario.steps[self.selected_step_idx]
+        old_name = step.get('name', 'Unnamed Step')
+        new_name, ok = QtWidgets.QInputDialog.getText(self, "Rename Step", "New name:", text=old_name)
+
+        if ok and new_name and new_name != old_name:
+            step['name'] = new_name
+            self.current_scenario.save()
+            self.refresh_lists()
 
     def import_scenario(self):
         path, _ = QtWidgets.QFileDialog.getOpenFileName(self, 'Import Scenario', '', 'JSON Files (*.json)')
@@ -336,12 +379,20 @@ class StepDialog(QtWidgets.QDialog):
             self.cond_combo.setCurrentText(step['condition'])
         # Images
         self.img_list = QtWidgets.QListWidget()
+        self.img_list.currentItemChanged.connect(self.update_image_preview)
         for img in self.images:
             self.img_list.addItem(img.get('name', 'img'))
         self.btn_add_img = QtWidgets.QPushButton('Add Image')
         self.btn_add_img.clicked.connect(self.add_image_to_step)
         self.btn_del_img = QtWidgets.QPushButton('Delete Image')
         self.btn_del_img.clicked.connect(self.delete_image)
+        self.btn_rename_img = QtWidgets.QPushButton("Rename Image")
+        self.btn_rename_img.clicked.connect(self.rename_image)
+        self.btn_retake_img = QtWidgets.QPushButton("Retake Screenshot")
+        self.btn_retake_img.clicked.connect(self.retake_screenshot)
+        self.img_preview = QtWidgets.QLabel('Image Preview')
+        self.img_preview.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+        self.img_preview.setMinimumSize(200, 200)
         # Actions
         self.act_list = QtWidgets.QListWidget()
         for act in self.actions:
@@ -353,22 +404,64 @@ class StepDialog(QtWidgets.QDialog):
         # Layout
         layout = QtWidgets.QGridLayout()
         layout.addWidget(QtWidgets.QLabel('Step Name:'), 0, 0)
-        layout.addWidget(self.name_edit, 0, 1)
+        layout.addWidget(self.name_edit, 0, 1, 1, 2)
         layout.addWidget(QtWidgets.QLabel('Condition:'), 1, 0)
-        layout.addWidget(self.cond_combo, 1, 1)
+        layout.addWidget(self.cond_combo, 1, 1, 1, 2)
+        
+        img_layout = QtWidgets.QHBoxLayout()
+        img_list_layout = QtWidgets.QVBoxLayout()
+        img_list_layout.addWidget(self.img_list)
+        img_list_layout.addWidget(self.btn_add_img)
+        img_list_layout.addWidget(self.btn_del_img)
+        img_list_layout.addWidget(self.btn_rename_img)
+        img_list_layout.addWidget(self.btn_retake_img)
+        img_layout.addLayout(img_list_layout)
+        img_layout.addWidget(self.img_preview)
+        
         layout.addWidget(QtWidgets.QLabel('Images:'), 2, 0)
-        layout.addWidget(self.img_list, 2, 1, 1, 2)
-        layout.addWidget(self.btn_add_img, 3, 1)
-        layout.addWidget(self.btn_del_img, 3, 2)
-        layout.addWidget(QtWidgets.QLabel('Actions:'), 4, 0)
+        layout.addLayout(img_layout, 2, 1, 1, 2)
+
+        layout.addWidget(QtWidgets.QLabel('Actions:'), 3, 0)
         layout.addWidget(self.act_list, 4, 1, 1, 2)
-        layout.addWidget(self.btn_add_act, 5, 1)
-        layout.addWidget(self.btn_del_act, 5, 2)
+        action_buttons = QtWidgets.QHBoxLayout()
+        action_buttons.addWidget(self.btn_add_act)
+        action_buttons.addWidget(self.btn_del_act)
+        layout.addLayout(action_buttons, 5, 1, 1, 2)
+
         btns = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.StandardButton.Ok | QtWidgets.QDialogButtonBox.StandardButton.Cancel)
         btns.accepted.connect(self.accept)
         btns.rejected.connect(self.reject)
         layout.addWidget(btns, 6, 1, 1, 2)
         self.setLayout(layout)
+
+    class NameImageDialog(QtWidgets.QDialog):
+    def __init__(self, pixmap, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Name Your Image")
+        
+        # Layouts
+        layout = QtWidgets.QVBoxLayout(self)
+        form_layout = QtWidgets.QFormLayout()
+        
+        # Image Preview
+        self.preview_label = QtWidgets.QLabel()
+        self.preview_label.setPixmap(pixmap.scaled(300, 300, QtCore.Qt.AspectRatioMode.KeepAspectRatio, QtCore.Qt.TransformationMode.SmoothTransformation))
+        layout.addWidget(self.preview_label, alignment=QtCore.Qt.AlignmentFlag.AlignCenter)
+        
+        # Name Input
+        self.name_edit = QtWidgets.QLineEdit()
+        form_layout.addRow("Image Name:", self.name_edit)
+        layout.addLayout(form_layout)
+        
+        # Dialog Buttons
+        button_box = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.StandardButton.Ok | QtWidgets.QDialogButtonBox.StandardButton.Cancel)
+        button_box.accepted.connect(self.accept)
+        button_box.rejected.connect(self.reject)
+        layout.addWidget(button_box)
+
+    def get_name(self):
+        return self.name_edit.text()
+
 
     def add_image_to_step(self):
         main_window = self.parent()
@@ -391,8 +484,9 @@ class StepDialog(QtWidgets.QDialog):
             if rect and not rect.isEmpty():
                 cropped_pixmap = full_screenshot_pixmap.copy(rect)
                 
-                name, ok = QtWidgets.QInputDialog.getText(self, 'Image Name', 'Enter image name:')
-                if ok and name:
+                name_dialog = NameImageDialog(cropped_pixmap, self)
+                if name_dialog.exec():
+                    name = name_dialog.get_name()
                     # Sanitize name to be a valid filename
                     safe_name = "".join(c for c in name if c.isalnum() or c in (' ', '_')).rstrip()
                     path = os.path.join(CONFIG_DIR, f'step_{safe_name}.png')
@@ -406,11 +500,69 @@ class StepDialog(QtWidgets.QDialog):
                         logger.error(f"Failed to save screenshot to {path}")
                         QtWidgets.QMessageBox.critical(self, 'Error', 'Failed to save the screenshot file.')
 
+    def update_image_preview(self, current, previous):
+        if current:
+            idx = self.img_list.row(current)
+            path = self.images[idx]['path']
+            pixmap = QtGui.QPixmap(path)
+            self.img_preview.setPixmap(pixmap.scaled(self.img_preview.size(), QtCore.Qt.AspectRatioMode.KeepAspectRatio, QtCore.Qt.TransformationMode.SmoothTransformation))
+        else:
+            self.img_preview.setText('Image Preview')
+
     def delete_image(self):
         idx = self.img_list.currentRow()
         if idx >= 0:
             self.images.pop(idx)
             self.img_list.takeItem(idx)
+
+    def rename_image(self):
+        idx = self.img_list.currentRow()
+        if idx < 0:
+            return
+
+        img_obj = self.images[idx]
+        old_name = img_obj.get('name', '')
+        new_name, ok = QtWidgets.QInputDialog.getText(self, "Rename Image", "New name:", text=old_name)
+
+        if ok and new_name and new_name != old_name:
+            img_obj['name'] = new_name
+            self.img_list.item(idx).setText(new_name)
+
+    def retake_screenshot(self):
+        idx = self.img_list.currentRow()
+        if idx < 0:
+            return
+
+        main_window = self.parent()
+        self.hide()
+        main_window.hide()
+        time.sleep(0.3)
+
+        try:
+            screen = QtWidgets.QApplication.primaryScreen()
+            if not screen:
+                raise Exception("Could not get primary screen.")
+            full_screenshot_pixmap = screen.grabWindow(0)
+        finally:
+            main_window.show()
+            self.show()
+
+        crop_dialog = CropDialog(full_screenshot_pixmap, self)
+        if crop_dialog.exec():
+            rect = crop_dialog.selection_rect
+            if rect and not rect.isEmpty():
+                cropped_pixmap = full_screenshot_pixmap.copy(rect)
+
+                img_obj = self.images[idx]
+                path = img_obj['path']
+
+                if cropped_pixmap.save(path, "PNG"):
+                    logger.info(f"Screenshot retaken and saved to {path}")
+                    img_obj['region'] = [rect.x(), rect.y(), rect.width(), rect.height()]
+                    self.update_image_preview(self.img_list.currentItem(), None)
+                else:
+                    logger.error(f"Failed to save retaken screenshot to {path}")
+                    QtWidgets.QMessageBox.critical(self, 'Error', 'Failed to save the retaken screenshot file.')
 
     def add_action(self):
         dlg = StepActionDialog(self)
