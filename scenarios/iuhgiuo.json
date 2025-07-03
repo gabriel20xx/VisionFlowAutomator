@@ -1,0 +1,15 @@
+{
+  "name": "iuhgiuo",
+  "images": [],
+  "actions": [
+    {
+      "type": "click",
+      "params": {
+        "delay_before": 0,
+        "delay_after": 0
+      },
+      "image_refs": [],
+      "logic": "OR"
+    }
+  ]
+}

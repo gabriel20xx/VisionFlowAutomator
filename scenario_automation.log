@@ -1,0 +1,78 @@
+[2025-07-03 11:06:06,465] DEBUG: Loading scenarios...
+[2025-07-03 11:06:06,466] INFO: Scenario selected: dwdw
+[2025-07-03 11:06:06,467] INFO: Scenario 'dwdw' loaded.
+[2025-07-03 11:06:06,467] DEBUG: Refreshing image and action lists.
+[2025-07-03 11:06:14,424] DEBUG: Add Image: Starting screenshot overlay.
+[2025-07-03 11:14:34,108] DEBUG: Loading scenarios...
+[2025-07-03 11:14:34,109] INFO: Scenario selected: dwdw
+[2025-07-03 11:14:34,110] INFO: Scenario 'dwdw' loaded.
+[2025-07-03 11:14:34,110] DEBUG: Refreshing steps list.
+[2025-07-03 11:14:34,113] DEBUG: Refreshing steps list.
+[2025-07-03 11:15:11,708] INFO: Scenario 'dwdw' saved.
+[2025-07-03 11:15:11,709] DEBUG: Refreshing steps list.
+[2025-07-03 11:15:11,709] INFO: Added step: {'name': '1', 'condition': 'OR', 'images': [], 'actions': [{'type': 'click', 'params': {}}]}
+[2025-07-03 11:15:32,076] INFO: Starting automation.
+[2025-07-03 11:19:32,334] DEBUG: Loading scenarios...
+[2025-07-03 11:19:32,337] INFO: Scenario selected: dwdw
+[2025-07-03 11:19:32,337] INFO: Scenario 'dwdw' loaded.
+[2025-07-03 11:19:32,341] DEBUG: Refreshing steps list.
+[2025-07-03 11:19:32,342] DEBUG: Refreshing steps list.
+[2025-07-03 11:24:20,552] DEBUG: Loading scenarios...
+[2025-07-03 11:24:20,553] INFO: Scenario selected: dwdw
+[2025-07-03 11:24:20,553] INFO: Scenario 'dwdw' loaded.
+[2025-07-03 11:24:20,554] DEBUG: Refreshing steps list.
+[2025-07-03 11:24:20,554] DEBUG: Refreshing steps list.
+[2025-07-03 11:24:30,610] INFO: Scenario 'dwdw' saved.
+[2025-07-03 11:24:30,610] DEBUG: Refreshing steps list.
+[2025-07-03 11:24:30,611] INFO: Deleted step at idx 0
+[2025-07-03 11:24:36,073] INFO: Scenario selected: iuhgiuo
+[2025-07-03 11:24:36,074] INFO: Scenario 'iuhgiuo' loaded.
+[2025-07-03 11:24:36,074] DEBUG: Refreshing steps list.
+[2025-07-03 11:37:19,863] DEBUG: Loading scenarios...
+[2025-07-03 11:37:19,865] INFO: Scenario selected: dwdw
+[2025-07-03 11:37:19,875] INFO: Scenario 'dwdw' loaded.
+[2025-07-03 11:37:19,875] DEBUG: Refreshing steps list.
+[2025-07-03 11:37:19,876] DEBUG: Refreshing steps list.
+[2025-07-03 11:39:19,964] DEBUG: Loading scenarios...
+[2025-07-03 11:39:19,965] INFO: Scenario selected: dwdw
+[2025-07-03 11:39:19,966] INFO: Scenario 'dwdw' loaded.
+[2025-07-03 11:39:19,966] DEBUG: Refreshing steps list.
+[2025-07-03 11:39:19,966] DEBUG: Refreshing steps list.
+[2025-07-03 11:39:54,959] DEBUG: Loading scenarios...
+[2025-07-03 11:39:54,960] INFO: Scenario selected: dwdw
+[2025-07-03 11:39:54,961] INFO: Scenario 'dwdw' loaded.
+[2025-07-03 11:39:54,961] DEBUG: Refreshing steps list.
+[2025-07-03 11:39:54,962] DEBUG: Refreshing steps list.
+[2025-07-03 11:52:13,031] DEBUG: Loading scenarios...
+[2025-07-03 11:52:13,033] INFO: Scenario selected: dwdw
+[2025-07-03 11:52:13,034] INFO: Scenario 'dwdw' loaded.
+[2025-07-03 11:52:13,034] DEBUG: Refreshing steps list.
+[2025-07-03 11:52:13,035] DEBUG: Refreshing steps list.
+[2025-07-03 11:54:25,492] DEBUG: Loading scenarios...
+[2025-07-03 11:54:25,494] INFO: Scenario selected: dwdw
+[2025-07-03 11:54:25,495] INFO: Scenario 'dwdw' loaded.
+[2025-07-03 11:54:25,495] DEBUG: Refreshing steps list.
+[2025-07-03 11:54:25,495] DEBUG: Refreshing steps list.
+[2025-07-03 11:55:47,426] DEBUG: Loading scenarios...
+[2025-07-03 11:55:47,428] INFO: Scenario selected: dwdw
+[2025-07-03 11:55:47,429] INFO: Scenario 'dwdw' loaded.
+[2025-07-03 11:55:47,429] DEBUG: Refreshing steps list.
+[2025-07-03 11:55:47,429] DEBUG: Refreshing steps list.
+[2025-07-03 11:56:11,952] INFO: Starting automation.
+[2025-07-03 11:56:11,953] INFO: Automation loop started.
+[2025-07-03 11:56:11,954] ERROR: Automation loop error: PyAutoGUI was unable to import pyscreeze. (This is likely because you're running a version of Python that Pillow (which pyscreeze depends on) doesn't support currently.) Please install this module to enable the function you tried to call.
+[2025-07-03 11:56:33,701] INFO: Scenario 'dwdw' saved.
+[2025-07-03 11:56:33,701] DEBUG: Refreshing steps list.
+[2025-07-03 11:56:33,703] INFO: Added step: {'name': '1', 'condition': 'OR', 'images': [], 'actions': [{'type': 'delay', 'params': {}}]}
+[2025-07-03 11:56:37,519] INFO: Starting automation.
+[2025-07-03 11:56:37,519] WARNING: Start Automation: No scenario selected or already running.
+[2025-07-03 11:56:41,580] INFO: Scenario selected: iuhgiuo
+[2025-07-03 11:56:41,581] INFO: Scenario 'iuhgiuo' loaded.
+[2025-07-03 11:56:41,582] DEBUG: Refreshing steps list.
+[2025-07-03 11:56:42,568] INFO: Scenario selected: dwdw
+[2025-07-03 11:56:42,583] INFO: Scenario 'dwdw' loaded.
+[2025-07-03 11:56:42,584] DEBUG: Refreshing steps list.
+[2025-07-03 11:56:44,749] INFO: Starting automation.
+[2025-07-03 11:56:44,749] WARNING: Start Automation: No scenario selected or already running.
+[2025-07-03 11:56:49,101] INFO: Starting automation.
+[2025-07-03 11:56:49,102] WARNING: Start Automation: No scenario selected or already running.

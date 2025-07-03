@@ -1,0 +1,16 @@
+{
+  "name": "dwdw",
+  "steps": [
+    {
+      "name": "1",
+      "condition": "OR",
+      "images": [],
+      "actions": [
+        {
+          "type": "delay",
+          "params": {}
+        }
+      ]
+    }
+  ]
+}

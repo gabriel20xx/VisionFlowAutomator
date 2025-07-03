@@ -1,0 +1,18 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Run Scenario Image Automation",
+            "type": "shell",
+            "command": "C:/Users/GabrielFranz/Documents/VS Code/Test/.venv/Scripts/python.exe",
+            "args": [
+                "main.py"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": []
+        }
+    ]
+}
