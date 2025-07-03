@@ -5,6 +5,8 @@ import json
 import threading
 import time
 import logging
+import zipfile
+import shutil
 from PyQt6 import QtWidgets, QtGui, QtCore
 import cv2
 import numpy as np
@@ -39,9 +41,16 @@ class Scenario:
     def from_dict(data):
         return Scenario(data['name'], data.get('steps', []))
 
+    def get_scenario_dir(self):
+        return os.path.join(CONFIG_DIR, self.name)
+
     def save(self):
         try:
-            with open(os.path.join(CONFIG_DIR, f'{self.name}.json'), 'w') as f:
+            scenario_dir = self.get_scenario_dir()
+            if not os.path.exists(scenario_dir):
+                os.makedirs(scenario_dir)
+            
+            with open(os.path.join(scenario_dir, 'scenario.json'), 'w') as f:
                 json.dump(self.to_dict(), f, indent=2)
             logger.info(f"Scenario '{self.name}' saved.")
         except Exception as e:
@@ -50,7 +59,8 @@ class Scenario:
     @staticmethod
     def load(name):
         try:
-            with open(os.path.join(CONFIG_DIR, f'{name}.json'), 'r') as f:
+            scenario_dir = os.path.join(CONFIG_DIR, name)
+            with open(os.path.join(scenario_dir, 'scenario.json'), 'r') as f:
                 scenario = Scenario.from_dict(json.load(f))
             logger.info(f"Scenario '{name}' loaded.")
             return scenario
@@ -60,7 +70,7 @@ class Scenario:
 
     @staticmethod
     def list_all():
-        return [f[:-5] for f in os.listdir(CONFIG_DIR) if f.endswith('.json')]
+        return [d for d in os.listdir(CONFIG_DIR) if os.path.isdir(os.path.join(CONFIG_DIR, d))]
 
 class CropDialog(QtWidgets.QDialog):
     def __init__(self, pixmap, parent=None):
@@ -316,31 +326,58 @@ class MainWindow(QtWidgets.QMainWindow):
             self.refresh_lists()
 
     def import_scenario(self):
-        path, _ = QtWidgets.QFileDialog.getOpenFileName(self, 'Import Scenario', '', 'JSON Files (*.json)')
+        path, _ = QtWidgets.QFileDialog.getOpenFileName(self, 'Import Scenario', '', 'ZIP Files (*.zip)')
         if path:
             try:
-                with open(path, 'r') as f:
-                    data = json.load(f)
-                s = Scenario.from_dict(data)
-                s.save()
+                with zipfile.ZipFile(path, 'r') as zip_ref:
+                    # Extract to a temporary directory to inspect
+                    temp_dir = os.path.join(CONFIG_DIR, "_temp_import")
+                    if os.path.exists(temp_dir):
+                        shutil.rmtree(temp_dir)
+                    zip_ref.extractall(temp_dir)
+                    
+                    # Find the scenario name (the directory inside the temp folder)
+                    extracted_dirs = [d for d in os.listdir(temp_dir) if os.path.isdir(os.path.join(temp_dir, d))]
+                    if not extracted_dirs:
+                        raise Exception("No scenario directory found in the zip file.")
+                    scenario_name = extracted_dirs[0]
+                    
+                    # Move the extracted scenario to the main scenarios directory
+                    src_path = os.path.join(temp_dir, scenario_name)
+                    dest_path = os.path.join(CONFIG_DIR, scenario_name)
+                    if os.path.exists(dest_path):
+                        shutil.rmtree(dest_path)
+                    shutil.move(src_path, dest_path)
+                    
+                    shutil.rmtree(temp_dir)
+
                 logger.info(f'Imported scenario from {path}')
                 self.load_scenarios()
-                self.combo.setCurrentText(s.name)
+                self.combo.setCurrentText(scenario_name)
             except Exception as e:
                 logger.error(f'Failed to import scenario: {e}')
+                QtWidgets.QMessageBox.critical(self, "Import Error", f"Failed to import scenario.\n{e}")
 
     def export_scenario(self):
         if not self.current_scenario:
             logger.warning('No scenario selected for export.')
             return
-        path, _ = QtWidgets.QFileDialog.getSaveFileName(self, 'Export Scenario', f'{self.current_scenario.name}.json', 'JSON Files (*.json)')
+
+        scenario_dir = self.current_scenario.get_scenario_dir()
+        path, _ = QtWidgets.QFileDialog.getSaveFileName(self, 'Export Scenario', f'{self.current_scenario.name}.zip', 'ZIP Files (*.zip)')
+
         if path:
             try:
-                with open(path, 'w') as f:
-                    json.dump(self.current_scenario.to_dict(), f, indent=2)
+                with zipfile.ZipFile(path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+                    for root, _, files in os.walk(scenario_dir):
+                        for file in files:
+                            file_path = os.path.join(root, file)
+                            arcname = os.path.relpath(file_path, CONFIG_DIR)
+                            zipf.write(file_path, arcname)
                 logger.info(f'Exported scenario to {path}')
             except Exception as e:
                 logger.error(f'Failed to export scenario: {e}')
+                QtWidgets.QMessageBox.critical(self, "Export Error", f"Failed to export scenario.\n{e}")
 
     
     def add_action(self):
@@ -435,45 +472,48 @@ class StepDialog(QtWidgets.QDialog):
         self.setLayout(layout)
 
     class NameImageDialog(QtWidgets.QDialog):
-    def __init__(self, pixmap, parent=None):
-        super().__init__(parent)
-        self.setWindowTitle("Name Your Image")
-        
-        # Layouts
-        layout = QtWidgets.QVBoxLayout(self)
-        form_layout = QtWidgets.QFormLayout()
-        
-        # Image Preview
-        self.preview_label = QtWidgets.QLabel()
-        self.preview_label.setPixmap(pixmap.scaled(300, 300, QtCore.Qt.AspectRatioMode.KeepAspectRatio, QtCore.Qt.TransformationMode.SmoothTransformation))
-        layout.addWidget(self.preview_label, alignment=QtCore.Qt.AlignmentFlag.AlignCenter)
-        
-        # Name Input
-        self.name_edit = QtWidgets.QLineEdit()
-        form_layout.addRow("Image Name:", self.name_edit)
-        layout.addLayout(form_layout)
-        
-        # Dialog Buttons
-        button_box = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.StandardButton.Ok | QtWidgets.QDialogButtonBox.StandardButton.Cancel)
-        button_box.accepted.connect(self.accept)
-        button_box.rejected.connect(self.reject)
-        layout.addWidget(button_box)
+        def __init__(self, pixmap, parent=None):
+            super().__init__(parent)
+            self.setWindowTitle("Name Your Image")
+            
+            # Layouts
+            layout = QtWidgets.QVBoxLayout(self)
+            form_layout = QtWidgets.QFormLayout()
+            
+            # Image Preview
+            self.preview_label = QtWidgets.QLabel()
+            self.preview_label.setPixmap(pixmap.scaled(300, 300, QtCore.Qt.AspectRatioMode.KeepAspectRatio, QtCore.Qt.TransformationMode.SmoothTransformation))
+            layout.addWidget(self.preview_label, alignment=QtCore.Qt.AlignmentFlag.AlignCenter)
+            
+            # Name Input
+            self.name_edit = QtWidgets.QLineEdit()
+            form_layout.addRow("Image Name:", self.name_edit)
+            layout.addLayout(form_layout)
+            
+            # Dialog Buttons
+            button_box = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.StandardButton.Ok | QtWidgets.QDialogButtonBox.StandardButton.Cancel)
+            button_box.accepted.connect(self.accept)
+            button_box.rejected.connect(self.reject)
+            layout.addWidget(button_box)
 
-    def get_name(self):
-        return self.name_edit.text()
+        def get_name(self):
+            return self.name_edit.text()
 
 
     def add_image_to_step(self):
-        main_window = self.parent()
+        main_window = self.parent().parent()
+        step_name = self.name_edit.text()
+        if not step_name:
+            QtWidgets.QMessageBox.warning(self, "Step Name Required", "Please enter a name for the step before adding an image.")
+            return
+
         main_window.hide()
-        # A brief delay to ensure the window is hidden before taking a screenshot
         time.sleep(0.3)
         
         try:
             screen = QtWidgets.QApplication.primaryScreen()
             if not screen:
                 raise Exception("Could not get primary screen.")
-            
             full_screenshot_pixmap = screen.grabWindow(0)
         finally:
             main_window.show()
@@ -487,9 +527,13 @@ class StepDialog(QtWidgets.QDialog):
                 name_dialog = NameImageDialog(cropped_pixmap, self)
                 if name_dialog.exec():
                     name = name_dialog.get_name()
-                    # Sanitize name to be a valid filename
+                    scenario_dir = main_window.current_scenario.get_scenario_dir()
+                    step_images_dir = os.path.join(scenario_dir, "steps", step_name)
+                    if not os.path.exists(step_images_dir):
+                        os.makedirs(step_images_dir)
+
                     safe_name = "".join(c for c in name if c.isalnum() or c in (' ', '_')).rstrip()
-                    path = os.path.join(CONFIG_DIR, f'step_{safe_name}.png')
+                    path = os.path.join(step_images_dir, f'{safe_name}.png')
                     
                     if cropped_pixmap.save(path, "PNG"):
                         logger.info(f"Screenshot saved to {path}")
@@ -533,7 +577,7 @@ class StepDialog(QtWidgets.QDialog):
         if idx < 0:
             return
 
-        main_window = self.parent()
+        main_window = self.parent().parent()
         self.hide()
         main_window.hide()
         time.sleep(0.3)
