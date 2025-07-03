@@ -269,20 +269,54 @@ class MainWindow(QtWidgets.QMainWindow):
         self.refresh_lists()
         logger.info(f'Deleted step at idx {idx}')
 
+    def save_last_scenario(self, name):
+        try:
+            with open(os.path.join(CONFIG_DIR, 'last_scenario.txt'), 'w') as f:
+                f.write(name)
+        except Exception as e:
+            logger.error(f"Could not save last scenario: {e}")
+
+    def read_last_scenario(self):
+        try:
+            path = os.path.join(CONFIG_DIR, 'last_scenario.txt')
+            if not os.path.exists(path):
+                return None
+            with open(path, 'r') as f:
+                return f.read().strip()
+        except Exception as e:
+            logger.error(f"Could not read last scenario: {e}")
+            return None
+
     def load_scenarios(self):
         logger.debug('Loading scenarios...')
         self.combo.clear()
-        for name in Scenario.list_all():
+        scenarios = Scenario.list_all()
+        for name in scenarios:
             self.combo.addItem(name)
-        if self.combo.count() > 0:
-            self.combo.setCurrentIndex(0)
-        self.refresh_lists()
+
+        if not scenarios:
+            name, ok = QtWidgets.QInputDialog.getText(self, 'New Scenario', 'No scenarios found. Enter a name for your first scenario:')
+            if ok and name:
+                logger.info(f'Creating new scenario: {name}')
+                s = Scenario(name)
+                s.save()
+                self.combo.addItem(name)
+                self.combo.setCurrentText(name)
+            else:
+                self.refresh_lists()
+        else:
+            last_scenario_name = self.read_last_scenario()
+            if last_scenario_name and last_scenario_name in scenarios:
+                self.combo.setCurrentText(last_scenario_name)
+            else:
+                self.combo.setCurrentIndex(0)
 
     def select_scenario(self):
         name = self.combo.currentText()
         logger.info(f'Scenario selected: {name}')
         if name:
             self.current_scenario = Scenario.load(name)
+            self.save_last_scenario(name)
             self.refresh_lists()
 
     def create_scenario(self):
@@ -507,6 +541,7 @@ class StepDialog(QtWidgets.QDialog):
 
 
     def add_image_to_step(self):
+        main_window = self.parent()
         step_name = self.name_edit.text()
         if not step_name:
             QtWidgets.QMessageBox.warning(self, "Step Name Required", "Please enter a name for the step before adding an image.")
