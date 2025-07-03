@@ -472,9 +472,9 @@ class StepDialog(QtWidgets.QDialog):
 
     def add_image_to_step(self):
         try:
-            overlay = ScreenshotOverlay()
-            overlay.region_selected.connect(self.save_screenshot)
-            overlay.showFullScreen()
+            self.overlay = ScreenshotOverlay()
+            self.overlay.region_selected.connect(self.save_screenshot)
+            self.overlay.showFullScreen()
         except Exception as e:
             QtWidgets.QMessageBox.critical(self, 'Error', f'Could not start screenshot overlay.\n{e}')
 
@@ -710,82 +710,7 @@ class StepActionDialog(QtWidgets.QDialog):
             params['duration'] = self.delay_spin.value()
         return {'type': t, 'params': params}
 
-    # Remove this duplicate update_fields definition (was not used)
-
-    def get_action(self):
-        try:
-            params = json.loads(self.param_edit.text())
-        except Exception:
-            params = {}
-        if self.type_combo.currentText() == 'click':
-            params['button'] = self.click_btn_combo.currentText()
-        if self.type_combo.currentText() == 'scroll':
-            params['direction'] = self.scroll_dir_combo.currentText()
-        return {'type': self.type_combo.currentText(), 'params': params}
-
-    def start_automation(self):
-        logger.info('Starting automation.')
-        if not self.current_scenario or self.running:
-            logger.warning('Start Automation: No scenario selected or already running.')
-            return
-        self.running = True
-        self.worker = threading.Thread(target=self.automation_loop, daemon=True)
-        self.worker.start()
-        self.listener = keyboard.GlobalHotKeys({self.hotkey: self.stop_automation})
-        self.listener.start()
-
-    def stop_automation(self):
-        logger.info('Stopping automation.')
-        self.running = False
-        if self.listener:
-            self.listener.stop()
-            self.listener = None
-
-    def automation_loop(self):
-        logger.info('Automation loop started.')
-        try:
-            while self.running:
-                screen = pyautogui.screenshot()
-                screen_np = cv2.cvtColor(np.array(screen), cv2.COLOR_RGB2BGR)
-                for step in self.current_scenario.steps:
-                    # Detect all images for this step
-                    detections = {}
-                    for img in step.get('images', []):
-                        try:
-                            template = cv2.imread(img['path'])
-                            if template is None:
-                                logger.warning(f"Could not load template image: {img['path']}")
-                                continue
-                            res = cv2.matchTemplate(screen_np, template, cv2.TM_CCOEFF_NORMED)
-                            min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
-                            logger.debug(f"Detection for {img['name']}: max_val={max_val}")
-                            if max_val > 0.9:
-                                detections[img['name']] = (max_loc, template.shape)
-                        except Exception as e:
-                            logger.error(f"Error in image detection for {img['name']}: {e}")
-                    # Check condition
-                    cond = step.get('condition', 'OR')
-                    found = [img for img in step.get('images', []) if img.get('name') in detections]
-                    trigger = False
-                    if not step.get('images', []):
-                        trigger = False
-                    elif cond == 'AND':
-                        trigger = len(found) == len(step.get('images', []))
-                    else:
-                        trigger = len(found) > 0
-                    logger.debug(f"Step '{step.get('name', 'step')}' trigger check: found={found}, cond={cond}, trigger={trigger}")
-                    if trigger:
-                        # Use the first detected image for position
-                        ref_img = found[0] if found else step.get('images', [])[0]
-                        loc, shape = detections.get(ref_img.get('name'), ((0, 0), (0, 0, 0)))
-                        for act in step.get('actions', []):
-                            self.perform_step_action(act, loc, shape)
-                        logger.info(f"Performed actions for step: {step.get('name', 'step')}")
-                        time.sleep(1)  # Prevent spamming
-                time.sleep(0.2)
-        except Exception as e:
-            logger.error(f'Automation loop error: {e}')
-
+    
     def perform_step_action(self, action, loc, shape):
         act_type = action['type']
         params = action['params']
