@@ -107,6 +107,12 @@ class CropDialog(QtWidgets.QDialog):
             self.selection_rect = self.rubber_band.geometry()
             self.accept()
 
+    def keyPressEvent(self, event):
+        if event.key() == QtCore.Qt.Key.Key_Escape:
+            self.reject()
+        else:
+            super().keyPressEvent(event)
+
 class MainWindow(QtWidgets.QMainWindow):
     def automation_loop(self):
         logger.info('Automation loop started.')
@@ -501,22 +507,28 @@ class StepDialog(QtWidgets.QDialog):
 
 
     def add_image_to_step(self):
-        main_window = self.parent()
         step_name = self.name_edit.text()
         if not step_name:
             QtWidgets.QMessageBox.warning(self, "Step Name Required", "Please enter a name for the step before adding an image.")
             return
 
-        main_window.hide()
-        time.sleep(0.3)
+        all_windows = QtWidgets.QApplication.topLevelWidgets()
+        for w in all_windows:
+            w.setWindowState(QtCore.Qt.WindowState.WindowMinimized)
+        
+        time.sleep(0.5)
         
         try:
             screen = QtWidgets.QApplication.primaryScreen()
             if not screen:
                 raise Exception("Could not get primary screen.")
+            
             full_screenshot_pixmap = screen.grabWindow(0)
         finally:
-            main_window.show()
+            for w in all_windows:
+                w.setWindowState(QtCore.Qt.WindowState.WindowNoState)
+                w.showNormal()
+                w.activateWindow()
 
         crop_dialog = CropDialog(full_screenshot_pixmap, self)
         if crop_dialog.exec():
@@ -577,10 +589,11 @@ class StepDialog(QtWidgets.QDialog):
         if idx < 0:
             return
 
-        main_window = self.parent()
-        self.hide()
-        main_window.hide()
-        time.sleep(0.3)
+        all_windows = QtWidgets.QApplication.topLevelWidgets()
+        for w in all_windows:
+            w.setWindowState(QtCore.Qt.WindowState.WindowMinimized)
+
+        time.sleep(0.5)
 
         try:
             screen = QtWidgets.QApplication.primaryScreen()
@@ -588,8 +601,10 @@ class StepDialog(QtWidgets.QDialog):
                 raise Exception("Could not get primary screen.")
             full_screenshot_pixmap = screen.grabWindow(0)
         finally:
-            main_window.show()
-            self.show()
+            for w in all_windows:
+                w.setWindowState(QtCore.Qt.WindowState.WindowNoState)
+                w.showNormal()
+                w.activateWindow()
 
         crop_dialog = CropDialog(full_screenshot_pixmap, self)
         if crop_dialog.exec():
