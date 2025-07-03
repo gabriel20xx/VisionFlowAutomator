@@ -114,7 +114,7 @@ class ScreenshotOverlay(QtWidgets.QWidget):
             qp.drawPixmap(0, 0, self._bg)
             qp.setBrush(QtGui.QColor(0, 0, 0, 120))
             qp.setPen(QtCore.Qt.PenStyle.NoPen)
-            qp.drawRect(self.rect() if hasattr(self, 'rect') else self.geometry())
+            qp.drawRect(self.geometry())
         # Draw selection rectangle
         if self.start and self.end:
             sel_rect = QtCore.QRect(self.start, self.end).normalized()
