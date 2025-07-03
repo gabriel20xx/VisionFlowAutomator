@@ -62,69 +62,40 @@ class Scenario:
     def list_all():
         return [f[:-5] for f in os.listdir(CONFIG_DIR) if f.endswith('.json')]
 
-class ScreenshotOverlay(QtWidgets.QWidget):
-    region_selected = QtCore.pyqtSignal(QtCore.QRect)
-    def __init__(self):
-        super().__init__()
-        self.setWindowFlags(
-            QtCore.Qt.WindowType.FramelessWindowHint |
-            QtCore.Qt.WindowType.WindowStaysOnTopHint |
-            QtCore.Qt.WindowType.Tool
-        )
-        self.setWindowState(QtCore.Qt.WindowState.WindowFullScreen)
-        self.setAttribute(QtCore.Qt.WidgetAttribute.WA_TranslucentBackground)
-        self.setAttribute(QtCore.Qt.WidgetAttribute.WA_NoSystemBackground, True)
-        self.setAttribute(QtCore.Qt.WidgetAttribute.WA_TransparentForMouseEvents, False)
-        self.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.CrossCursor))
-        self.start = None
-        self.end = None
-        self.selection_rect = None
-        self._bg = self._grab_bg()
+class CropDialog(QtWidgets.QDialog):
+    def __init__(self, pixmap, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Select Area")
+        self.pixmap = pixmap
 
-    def _grab_bg(self):
-        # Grab the current screen as a QPixmap for dimming
-        screen = QtWidgets.QApplication.primaryScreen()
-        if screen:
-            return screen.grabWindow(0)
-        return None
+        self.label = QtWidgets.QLabel(self)
+        self.label.setPixmap(self.pixmap)
+        self.label.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.CrossCursor))
+        
+        self.rubber_band = QtWidgets.QRubberBand(QtWidgets.QRubberBand.Shape.Rectangle, self.label)
+
+        layout = QtWidgets.QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(self.label)
+        self.setLayout(layout)
+        
+        self.setWindowState(QtCore.Qt.WindowState.WindowMaximized)
+        self.start_pos = None
+        self.selection_rect = None
 
     def mousePressEvent(self, event):
-        logger.debug('ScreenshotOverlay: Mouse press event.')
-        self.start = event.pos()
-        self.end = self.start
-        self.update()
+        self.start_pos = event.position().toPoint()
+        self.rubber_band.setGeometry(QtCore.QRect(self.start_pos, QtCore.QSize()))
+        self.rubber_band.show()
 
     def mouseMoveEvent(self, event):
-        logger.debug('ScreenshotOverlay: Mouse move event.')
-        self.end = event.pos()
-        self.update()
+        if self.start_pos:
+            self.rubber_band.setGeometry(QtCore.QRect(self.start_pos, event.position().toPoint()).normalized())
 
     def mouseReleaseEvent(self, event):
-        logger.debug('ScreenshotOverlay: Mouse release event.')
-        self.end = event.pos()
-        self.selection_rect = QtCore.QRect(self.start, self.end).normalized()
-        logger.info(f'ScreenshotOverlay: Region selected: {self.selection_rect}')
-        self.region_selected.emit(self.selection_rect)
-        self.close()
-
-    def paintEvent(self, event):
-        qp = QtGui.QPainter(self)
-        if self._bg:
-            # Draw the background screenshot
-            qp.drawPixmap(self.rect(), self._bg)
-            # Draw the semi-transparent dimming overlay
-            qp.setBrush(QtGui.QColor(0, 0, 0, 120))
-            qp.drawRect(self.rect())
-
-            # If a selection is being made, clear the dimmed area and draw a border
-            if self.start and self.end:
-                selection = QtCore.QRect(self.start, self.end).normalized()
-                # Redraw the original screenshot portion within the selection
-                qp.drawPixmap(selection, self._bg, selection)
-                # Draw the selection border
-                qp.setPen(QtGui.QPen(QtGui.QColor(0, 255, 0), 2))
-                qp.setBrush(QtCore.Qt.BrushStyle.NoBrush)
-                qp.drawRect(selection)
+        if self.start_pos:
+            self.selection_rect = self.rubber_band.geometry()
+            self.accept()
 
 class MainWindow(QtWidgets.QMainWindow):
     def automation_loop(self):
@@ -328,78 +299,7 @@ class MainWindow(QtWidgets.QMainWindow):
             except Exception as e:
                 logger.error(f'Failed to export scenario: {e}')
 
-    def add_image(self):
-        if not self.current_scenario:
-            logger.warning('Add Image: No scenario selected.')
-            QtWidgets.QMessageBox.warning(self, 'No Scenario Selected', 'Please select or create a scenario first.')
-            return
-        try:
-            logger.debug('[DEBUG] add_image called, preparing to show ScreenshotOverlay')
-            overlay = ScreenshotOverlay()
-            logger.debug('[DEBUG] Connecting region_selected signal to save_screenshot')
-            overlay.region_selected.connect(lambda rect: self.save_screenshot(rect))
-            logger.debug('[DEBUG] Showing ScreenshotOverlay full screen')
-            overlay.showFullScreen()
-        except Exception as e:
-            logger.error(f'Add Image: Could not start screenshot overlay: {e}')
-            QtWidgets.QMessageBox.critical(self, 'Error', f'Could not start screenshot overlay.\n{e}')
-
-    def save_screenshot(self, rect):
-        logger.debug(f'[DEBUG] Entered save_screenshot with rect={rect}')
-        try:
-            # Validate region
-            logger.debug('[DEBUG] Validating region')
-            if rect.width() <= 0 or rect.height() <= 0:
-                QtWidgets.QMessageBox.critical(self, 'Screenshot Error', 'Selected region is invalid (zero width or height).')
-                logger.error('[DEBUG] Save Screenshot: Invalid region (zero width or height).')
-                return
-            screen = QtWidgets.QApplication.primaryScreen()
-            screen_geo = screen.geometry() if screen else None
-            logger.debug(f'[DEBUG] Screen geometry: {screen_geo}')
-            if screen_geo and (
-                rect.x() < 0 or rect.y() < 0 or
-                rect.x() + rect.width() > screen_geo.width() or
-                rect.y() + rect.height() > screen_geo.height()
-            ):
-                QtWidgets.QMessageBox.critical(self, 'Screenshot Error', 'Selected region is out of screen bounds.')
-                logger.error('[DEBUG] Save Screenshot: Region out of screen bounds.')
-                return
-            logger.debug('[DEBUG] Region validated, proceeding to mss')
-            with mss.mss() as sct:
-                monitor = {
-                    "top": rect.y(),
-                    "left": rect.x(),
-                    "width": rect.width(),
-                    "height": rect.height()
-                }
-                logger.debug(f'[DEBUG] Save Screenshot: monitor={monitor}')
-                try:
-                    logger.debug('[DEBUG] Calling sct.grab')
-                    sct_img = sct.grab(monitor)
-                    logger.debug('[DEBUG] sct.grab succeeded')
-                except Exception as e:
-                    QtWidgets.QMessageBox.critical(self, 'Screenshot Error', f'Failed to grab screenshot with mss.\n{e}')
-                    logger.error(f'[DEBUG] Save Screenshot: mss.grab failed: {e}')
-                    return
-                img = np.array(sct_img)
-                logger.debug('[DEBUG] Converted sct_img to numpy array')
-                img = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)
-                logger.debug('[DEBUG] Converted image to BGR')
-                name, ok = QtWidgets.QInputDialog.getText(self, 'Image Name', 'Enter image name:')
-                if ok and name:
-                    path = os.path.join(CONFIG_DIR, f'{self.current_scenario.name}_{name}.png')
-                    cv2.imwrite(path, img)
-                    logger.debug(f'[DEBUG] Image written to {path}')
-                    self.current_scenario.images.append({'path': path, 'region': [rect.x(), rect.y(), rect.width(), rect.height()], 'name': name})
-                    self.current_scenario.save()
-                    self.refresh_lists()
-                    logger.info(f'Screenshot saved: {path}')
-                else:
-                    logger.info('[DEBUG] Save Screenshot: Cancelled or no name entered.')
-        except Exception as e:
-            QtWidgets.QMessageBox.critical(self, 'Screenshot Error', f'Failed to capture or save screenshot.\n{e}')
-            logger.error(f'[DEBUG] Save Screenshot: Failed to capture or save screenshot: {e}')
-
+    
     def add_action(self):
         logger.debug('Add Action: Opening action dialog.')
         dlg = ActionDialog(self, self.current_scenario.images)
@@ -471,31 +371,40 @@ class StepDialog(QtWidgets.QDialog):
         self.setLayout(layout)
 
     def add_image_to_step(self):
+        main_window = self.parent()
+        main_window.hide()
+        # A brief delay to ensure the window is hidden before taking a screenshot
+        time.sleep(0.3)
+        
         try:
-            self.overlay = ScreenshotOverlay()
-            self.overlay.region_selected.connect(self.save_screenshot)
-            self.overlay.showFullScreen()
-        except Exception as e:
-            QtWidgets.QMessageBox.critical(self, 'Error', f'Could not start screenshot overlay.\n{e}')
+            screen = QtWidgets.QApplication.primaryScreen()
+            if not screen:
+                raise Exception("Could not get primary screen.")
+            
+            full_screenshot_pixmap = screen.grabWindow(0)
+        finally:
+            main_window.show()
 
-    def save_screenshot(self, rect):
-        with mss.mss() as sct:
-            monitor = {
-                "top": rect.y(),
-                "left": rect.x(),
-                "width": rect.width(),
-                "height": rect.height()
-            }
-            sct_img = sct.grab(monitor)
-            img = np.array(sct_img)
-            img = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)
-            name, ok = QtWidgets.QInputDialog.getText(self, 'Image Name', 'Enter image name:')
-            if ok and name:
-                path = os.path.join(CONFIG_DIR, f'step_{name}.png')
-                cv2.imwrite(path, img)
-                img_obj = {'path': path, 'region': [rect.x(), rect.y(), rect.width(), rect.height()], 'name': name}
-                self.images.append(img_obj)
-                self.img_list.addItem(name)
+        crop_dialog = CropDialog(full_screenshot_pixmap, self)
+        if crop_dialog.exec():
+            rect = crop_dialog.selection_rect
+            if rect and not rect.isEmpty():
+                cropped_pixmap = full_screenshot_pixmap.copy(rect)
+                
+                name, ok = QtWidgets.QInputDialog.getText(self, 'Image Name', 'Enter image name:')
+                if ok and name:
+                    # Sanitize name to be a valid filename
+                    safe_name = "".join(c for c in name if c.isalnum() or c in (' ', '_')).rstrip()
+                    path = os.path.join(CONFIG_DIR, f'step_{safe_name}.png')
+                    
+                    if cropped_pixmap.save(path, "PNG"):
+                        logger.info(f"Screenshot saved to {path}")
+                        img_obj = {'path': path, 'region': [rect.x(), rect.y(), rect.width(), rect.height()], 'name': name}
+                        self.images.append(img_obj)
+                        self.img_list.addItem(name)
+                    else:
+                        logger.error(f"Failed to save screenshot to {path}")
+                        QtWidgets.QMessageBox.critical(self, 'Error', 'Failed to save the screenshot file.')
 
     def delete_image(self):
         idx = self.img_list.currentRow()
