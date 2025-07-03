@@ -536,7 +536,7 @@ class StepDialog(QtWidgets.QDialog):
             if rect and not rect.isEmpty():
                 cropped_pixmap = full_screenshot_pixmap.copy(rect)
                 
-                name_dialog = NameImageDialog(cropped_pixmap, self)
+                name_dialog = self.NameImageDialog(cropped_pixmap, self)
                 if name_dialog.exec():
                     name = name_dialog.get_name()
                     scenario_dir = main_window.current_scenario.get_scenario_dir()
