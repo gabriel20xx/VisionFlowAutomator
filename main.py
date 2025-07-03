@@ -109,22 +109,32 @@ class ScreenshotOverlay(QtWidgets.QWidget):
 
     def paintEvent(self, event):
         qp = QtGui.QPainter(self)
-        # Draw dimmed background
-        if self._bg:
-            qp.drawPixmap(0, 0, self._bg)
-            qp.setBrush(QtGui.QColor(0, 0, 0, 120))
-            qp.setPen(QtCore.Qt.PenStyle.NoPen)
-            qp.drawRect(self.geometry())
-        # Draw selection rectangle
+        if not self._bg:
+            return
+
+        # Draw the background screenshot first.
+        qp.drawPixmap(0, 0, self._bg)
+
+        # Prepare a path for the dimmed overlay.
+        dim_path = QtGui.QPainterPath()
+        dim_path.addRect(QtCore.QRectF(self.geometry()))
+
+        # If a selection is being made, subtract it from the dimmed path.
         if self.start and self.end:
-            sel_rect = QtCore.QRect(self.start, self.end).normalized()
+            selection_rect = QtCore.QRect(self.start, self.end).normalized()
+            selection_path = QtGui.QPainterPath()
+            selection_path.addRect(QtCore.QRectF(selection_rect))
+            dim_path = dim_path.subtracted(selection_path)
+
+            # Draw the border of the selection.
             qp.setBrush(QtCore.Qt.BrushStyle.NoBrush)
             qp.setPen(QtGui.QPen(QtGui.QColor(0, 255, 0), 2))
-            qp.drawRect(sel_rect)
-            # Optionally, highlight the selected area
-            qp.setBrush(QtGui.QColor(0, 255, 0, 40))
-            qp.setPen(QtCore.Qt.PenStyle.NoPen)
-            qp.drawRect(sel_rect)
+            qp.drawRect(selection_rect)
+
+        # Fill the dimmed area (the path that excludes the selection).
+        qp.setBrush(QtGui.QColor(0, 0, 0, 120))
+        qp.setPen(QtCore.Qt.PenStyle.NoPen)
+        qp.drawPath(dim_path)
 
 class MainWindow(QtWidgets.QMainWindow):
     def automation_loop(self):
