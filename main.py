@@ -345,6 +345,21 @@ class MainWindow(QtWidgets.QMainWindow):
     def save_screenshot(self, rect):
         logger.debug(f'Save Screenshot: rect={rect}')
         try:
+            # Validate region
+            if rect.width() <= 0 or rect.height() <= 0:
+                QtWidgets.QMessageBox.critical(self, 'Screenshot Error', 'Selected region is invalid (zero width or height).')
+                logger.error('Save Screenshot: Invalid region (zero width or height).')
+                return
+            screen = QtWidgets.QApplication.primaryScreen()
+            screen_geo = screen.geometry() if screen else None
+            if screen_geo and (
+                rect.x() < 0 or rect.y() < 0 or
+                rect.x() + rect.width() > screen_geo.width() or
+                rect.y() + rect.height() > screen_geo.height()
+            ):
+                QtWidgets.QMessageBox.critical(self, 'Screenshot Error', 'Selected region is out of screen bounds.')
+                logger.error('Save Screenshot: Region out of screen bounds.')
+                return
             with mss.mss() as sct:
                 monitor = {
                     "top": rect.y(),
@@ -353,7 +368,12 @@ class MainWindow(QtWidgets.QMainWindow):
                     "height": rect.height()
                 }
                 logger.debug(f'Save Screenshot: monitor={monitor}')
-                sct_img = sct.grab(monitor)
+                try:
+                    sct_img = sct.grab(monitor)
+                except Exception as e:
+                    QtWidgets.QMessageBox.critical(self, 'Screenshot Error', f'Failed to grab screenshot with mss.\n{e}')
+                    logger.error(f'Save Screenshot: mss.grab failed: {e}')
+                    return
                 img = np.array(sct_img)
                 img = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)
                 name, ok = QtWidgets.QInputDialog.getText(self, 'Image Name', 'Enter image name:')
@@ -367,6 +387,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 else:
                     logger.info('Save Screenshot: Cancelled or no name entered.')
         except Exception as e:
+            QtWidgets.QMessageBox.critical(self, 'Screenshot Error', f'Failed to capture or save screenshot.\n{e}')
             logger.error(f'Save Screenshot: Failed to capture or save screenshot: {e}')
 
     def add_action(self):
