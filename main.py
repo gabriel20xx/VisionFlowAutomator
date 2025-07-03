@@ -334,32 +334,37 @@ class MainWindow(QtWidgets.QMainWindow):
             QtWidgets.QMessageBox.warning(self, 'No Scenario Selected', 'Please select or create a scenario first.')
             return
         try:
-            logger.debug('Add Image: Starting screenshot overlay.')
+            logger.debug('[DEBUG] add_image called, preparing to show ScreenshotOverlay')
             overlay = ScreenshotOverlay()
+            logger.debug('[DEBUG] Connecting region_selected signal to save_screenshot')
             overlay.region_selected.connect(lambda rect: self.save_screenshot(rect))
+            logger.debug('[DEBUG] Showing ScreenshotOverlay full screen')
             overlay.showFullScreen()
         except Exception as e:
             logger.error(f'Add Image: Could not start screenshot overlay: {e}')
             QtWidgets.QMessageBox.critical(self, 'Error', f'Could not start screenshot overlay.\n{e}')
 
     def save_screenshot(self, rect):
-        logger.debug(f'Save Screenshot: rect={rect}')
+        logger.debug(f'[DEBUG] Entered save_screenshot with rect={rect}')
         try:
             # Validate region
+            logger.debug('[DEBUG] Validating region')
             if rect.width() <= 0 or rect.height() <= 0:
                 QtWidgets.QMessageBox.critical(self, 'Screenshot Error', 'Selected region is invalid (zero width or height).')
-                logger.error('Save Screenshot: Invalid region (zero width or height).')
+                logger.error('[DEBUG] Save Screenshot: Invalid region (zero width or height).')
                 return
             screen = QtWidgets.QApplication.primaryScreen()
             screen_geo = screen.geometry() if screen else None
+            logger.debug(f'[DEBUG] Screen geometry: {screen_geo}')
             if screen_geo and (
                 rect.x() < 0 or rect.y() < 0 or
                 rect.x() + rect.width() > screen_geo.width() or
                 rect.y() + rect.height() > screen_geo.height()
             ):
                 QtWidgets.QMessageBox.critical(self, 'Screenshot Error', 'Selected region is out of screen bounds.')
-                logger.error('Save Screenshot: Region out of screen bounds.')
+                logger.error('[DEBUG] Save Screenshot: Region out of screen bounds.')
                 return
+            logger.debug('[DEBUG] Region validated, proceeding to mss')
             with mss.mss() as sct:
                 monitor = {
                     "top": rect.y(),
@@ -367,28 +372,33 @@ class MainWindow(QtWidgets.QMainWindow):
                     "width": rect.width(),
                     "height": rect.height()
                 }
-                logger.debug(f'Save Screenshot: monitor={monitor}')
+                logger.debug(f'[DEBUG] Save Screenshot: monitor={monitor}')
                 try:
+                    logger.debug('[DEBUG] Calling sct.grab')
                     sct_img = sct.grab(monitor)
+                    logger.debug('[DEBUG] sct.grab succeeded')
                 except Exception as e:
                     QtWidgets.QMessageBox.critical(self, 'Screenshot Error', f'Failed to grab screenshot with mss.\n{e}')
-                    logger.error(f'Save Screenshot: mss.grab failed: {e}')
+                    logger.error(f'[DEBUG] Save Screenshot: mss.grab failed: {e}')
                     return
                 img = np.array(sct_img)
+                logger.debug('[DEBUG] Converted sct_img to numpy array')
                 img = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)
+                logger.debug('[DEBUG] Converted image to BGR')
                 name, ok = QtWidgets.QInputDialog.getText(self, 'Image Name', 'Enter image name:')
                 if ok and name:
                     path = os.path.join(CONFIG_DIR, f'{self.current_scenario.name}_{name}.png')
                     cv2.imwrite(path, img)
+                    logger.debug(f'[DEBUG] Image written to {path}')
                     self.current_scenario.images.append({'path': path, 'region': [rect.x(), rect.y(), rect.width(), rect.height()], 'name': name})
                     self.current_scenario.save()
                     self.refresh_lists()
                     logger.info(f'Screenshot saved: {path}')
                 else:
-                    logger.info('Save Screenshot: Cancelled or no name entered.')
+                    logger.info('[DEBUG] Save Screenshot: Cancelled or no name entered.')
         except Exception as e:
             QtWidgets.QMessageBox.critical(self, 'Screenshot Error', f'Failed to capture or save screenshot.\n{e}')
-            logger.error(f'Save Screenshot: Failed to capture or save screenshot: {e}')
+            logger.error(f'[DEBUG] Save Screenshot: Failed to capture or save screenshot: {e}')
 
     def add_action(self):
         logger.debug('Add Action: Opening action dialog.')
