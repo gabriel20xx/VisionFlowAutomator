@@ -439,7 +439,7 @@ class StepDialog(QtWidgets.QDialog):
         for img in self.images:
             self.img_list.addItem(img.get('name', 'img'))
         self.btn_add_img = QtWidgets.QPushButton('Add Image')
-        self.btn_add_img.clicked.connect(self.add_image)
+        self.btn_add_img.clicked.connect(self.add_image_to_step)
         self.btn_del_img = QtWidgets.QPushButton('Delete Image')
         self.btn_del_img.clicked.connect(self.delete_image)
         # Actions
@@ -470,7 +470,7 @@ class StepDialog(QtWidgets.QDialog):
         layout.addWidget(btns, 6, 1, 1, 2)
         self.setLayout(layout)
 
-    def add_image(self):
+    def add_image_to_step(self):
         try:
             overlay = ScreenshotOverlay()
             overlay.region_selected.connect(self.save_screenshot)
