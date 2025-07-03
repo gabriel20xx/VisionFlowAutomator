@@ -501,7 +501,7 @@ class StepDialog(QtWidgets.QDialog):
 
 
     def add_image_to_step(self):
-        main_window = self.parent().parent()
+        main_window = self.parent()
         step_name = self.name_edit.text()
         if not step_name:
             QtWidgets.QMessageBox.warning(self, "Step Name Required", "Please enter a name for the step before adding an image.")
@@ -577,7 +577,7 @@ class StepDialog(QtWidgets.QDialog):
         if idx < 0:
             return
 
-        main_window = self.parent().parent()
+        main_window = self.parent()
         self.hide()
         main_window.hide()
         time.sleep(0.3)
