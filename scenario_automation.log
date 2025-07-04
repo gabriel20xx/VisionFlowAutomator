@@ -76,3 +76,96 @@
 [2025-07-03 11:56:44,749] WARNING: Start Automation: No scenario selected or already running.
 [2025-07-03 11:56:49,101] INFO: Starting automation.
 [2025-07-03 11:56:49,102] WARNING: Start Automation: No scenario selected or already running.
+[2025-07-04 08:50:01,955] DEBUG: Loading scenarios...
+[2025-07-04 08:50:06,747] INFO: Creating new scenario: Test
+[2025-07-04 08:50:06,749] INFO: Scenario 'Test' saved.
+[2025-07-04 08:50:06,752] INFO: Scenario selected: Test
+[2025-07-04 08:50:06,776] INFO: Scenario 'Test' loaded.
+[2025-07-04 08:50:06,787] DEBUG: Refreshing steps list.
+[2025-07-04 08:50:26,650] DEBUG: Loading scenarios...
+[2025-07-04 08:50:26,651] INFO: Scenario selected: Test
+[2025-07-04 08:50:26,652] INFO: Scenario 'Test' loaded.
+[2025-07-04 08:50:26,654] DEBUG: Refreshing steps list.
+[2025-07-04 08:51:59,701] DEBUG: Loading scenarios...
+[2025-07-04 08:51:59,702] INFO: Scenario selected: Test
+[2025-07-04 08:51:59,703] INFO: Scenario 'Test' loaded.
+[2025-07-04 08:51:59,704] DEBUG: Refreshing steps list.
+[2025-07-04 08:52:54,956] DEBUG: Loading scenarios...
+[2025-07-04 08:52:54,957] INFO: Scenario selected: Test
+[2025-07-04 08:52:54,958] INFO: Scenario 'Test' loaded.
+[2025-07-04 08:52:54,959] DEBUG: Refreshing steps list.
+[2025-07-04 08:52:57,486] DEBUG: add_step called
+[2025-07-04 08:52:57,486] DEBUG: add_step: current_scenario=<__main__.Scenario object at 0x000002931EA81D30>, steps=[]
+[2025-07-04 08:52:57,489] ERROR: add_step: Exception occurred: 'StepDialog' object has no attribute 'update_image_preview'
+Traceback (most recent call last):
+  File "c:\Users\GabrielFranz\Documents\VS Code\ScreenClicker\main.py", line 282, in add_step
+    dlg = StepDialog(self)
+  File "c:\Users\GabrielFranz\Documents\VS Code\ScreenClicker\main.py", line 508, in __init__
+    self.img_list.currentItemChanged.connect(self.update_image_preview)
+                                             ^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'StepDialog' object has no attribute 'update_image_preview'
+[2025-07-04 08:53:37,353] DEBUG: Loading scenarios...
+[2025-07-04 08:53:37,354] INFO: Scenario selected: Test
+[2025-07-04 08:53:37,355] INFO: Scenario 'Test' loaded.
+[2025-07-04 08:53:37,356] DEBUG: Refreshing steps list.
+[2025-07-04 08:53:39,035] DEBUG: add_step called
+[2025-07-04 08:53:39,035] DEBUG: add_step: current_scenario=<__main__.Scenario object at 0x000001DA61AD1D30>, steps=[]
+[2025-07-04 08:53:39,038] DEBUG: add_step: StepDialog created
+[2025-07-04 08:53:44,529] DEBUG: add_step: StepDialog exec result=0
+[2025-07-04 08:54:34,216] DEBUG: add_step called
+[2025-07-04 08:54:34,216] DEBUG: add_step: current_scenario=<__main__.Scenario object at 0x000001DA61AD1D30>, steps=[]
+[2025-07-04 08:54:34,218] DEBUG: add_step: StepDialog created
+[2025-07-04 08:56:05,451] DEBUG: Loading scenarios...
+[2025-07-04 08:56:05,452] INFO: Scenario selected: Test
+[2025-07-04 08:56:05,454] INFO: Scenario 'Test' loaded.
+[2025-07-04 08:56:05,456] DEBUG: Refreshing steps list.
+[2025-07-04 08:56:06,667] DEBUG: add_step called
+[2025-07-04 08:56:06,667] DEBUG: add_step: current_scenario=<__main__.Scenario object at 0x000001B0E9C91D30>, steps=[]
+[2025-07-04 08:56:06,672] ERROR: add_step: Exception occurred: 'StepDialog' object has no attribute 'delete_image'
+Traceback (most recent call last):
+  File "c:\Users\GabrielFranz\Documents\VS Code\ScreenClicker\main.py", line 282, in add_step
+    dlg = StepDialog(self)
+  File "c:\Users\GabrielFranz\Documents\VS Code\ScreenClicker\main.py", line 514, in __init__
+    self.btn_del_img.clicked.connect(self.delete_image)
+                                     ^^^^^^^^^^^^^^^^^
+AttributeError: 'StepDialog' object has no attribute 'delete_image'
+[2025-07-04 08:59:13,478] DEBUG: Loading scenarios...
+[2025-07-04 08:59:13,479] INFO: Scenario selected: Test
+[2025-07-04 08:59:13,480] INFO: Scenario 'Test' loaded.
+[2025-07-04 08:59:13,484] DEBUG: Refreshing steps list.
+[2025-07-04 09:00:08,491] INFO: Screenshot saved to scenarios\Test\steps\dwwd\dw.png
+[2025-07-04 09:07:51,200] DEBUG: Loading scenarios...
+[2025-07-04 09:07:51,202] INFO: Scenario selected: Test
+[2025-07-04 09:07:51,205] INFO: Scenario 'Test' loaded.
+[2025-07-04 09:07:51,206] DEBUG: Refreshing steps list.
+[2025-07-04 09:07:53,117] DEBUG: add_step called
+[2025-07-04 09:07:53,117] DEBUG: add_step: current_scenario=<__main__.Scenario object at 0x000002114B6C5E80>, steps=[]
+[2025-07-04 09:07:53,123] DEBUG: add_step: StepDialog created
+[2025-07-04 09:08:05,415] DEBUG: add_step: StepDialog exec result=0
+[2025-07-04 09:08:18,041] DEBUG: add_step called
+[2025-07-04 09:08:18,041] DEBUG: add_step: current_scenario=<__main__.Scenario object at 0x000002114B6C5E80>, steps=[]
+[2025-07-04 09:08:18,043] DEBUG: add_step: StepDialog created
+[2025-07-04 09:08:47,777] INFO: Screenshot saved to scenarios\Test\steps\dwdwwd\c.png
+[2025-07-04 09:19:40,762] DEBUG: Loading scenarios...
+[2025-07-04 09:19:40,763] INFO: Scenario selected: Test
+[2025-07-04 09:19:40,764] INFO: Scenario 'Test' loaded.
+[2025-07-04 09:19:40,766] DEBUG: Refreshing steps list.
+[2025-07-04 09:19:42,592] DEBUG: add_step called
+[2025-07-04 09:19:42,593] DEBUG: add_step: current_scenario=<__main__.Scenario object at 0x000001D999035E80>, steps=[]
+[2025-07-04 09:19:42,599] DEBUG: add_step: StepDialog created
+[2025-07-04 09:20:01,659] INFO: Screenshot saved to scenarios\Test\steps\hjoi\99.png
+[2025-07-04 09:20:26,777] DEBUG: add_step: StepDialog exec result=0
+[2025-07-04 09:22:04,971] DEBUG: add_step called
+[2025-07-04 09:22:04,971] DEBUG: add_step: current_scenario=<__main__.Scenario object at 0x000001D999035E80>, steps=[]
+[2025-07-04 09:22:04,974] DEBUG: add_step: StepDialog created
+[2025-07-04 09:24:16,559] DEBUG: Loading scenarios...
+[2025-07-04 09:24:16,560] INFO: Scenario selected: Test
+[2025-07-04 09:24:16,561] INFO: Scenario 'Test' loaded.
+[2025-07-04 09:24:16,563] DEBUG: Refreshing steps list.
+[2025-07-04 09:24:18,500] DEBUG: add_step called
+[2025-07-04 09:24:18,500] DEBUG: add_step: current_scenario=<__main__.Scenario object at 0x0000029B9CEB5E80>, steps=[]
+[2025-07-04 09:24:18,508] DEBUG: add_step: StepDialog created
+[2025-07-04 09:24:41,858] DEBUG: add_step called
+[2025-07-04 09:24:41,859] DEBUG: add_step: current_scenario=<__main__.Scenario object at 0x0000029B9CEB5E80>, steps=[]
+[2025-07-04 09:24:41,861] DEBUG: add_step: StepDialog created
+[2025-07-04 09:24:43,269] DEBUG: add_step: StepDialog exec result=0
