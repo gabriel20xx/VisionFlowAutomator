@@ -149,7 +149,8 @@ class MainWindow(QtWidgets.QMainWindow):
                             res = cv2.matchTemplate(screen_np, template, cv2.TM_CCOEFF_NORMED)
                             min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
                             logger.debug(f"Detection for {img['name']}: max_val={max_val}")
-                            if max_val > 0.9:
+                            sensitivity = img.get('sensitivity', 0.9)
+                            if max_val > sensitivity:
                                 detections[img['name']] = (max_loc, template.shape)
                         except Exception as e:
                             logger.error(f"Error in image detection for {img['name']}: {e}")
@@ -610,6 +611,14 @@ class StepDialog(QtWidgets.QDialog):
         self.img_list.currentItemChanged.connect(self.update_image_preview)
         for img in self.images:
             self.img_list.addItem(img.get('name', 'img'))
+        self.sensitivity_spin = QtWidgets.QDoubleSpinBox()
+        self.sensitivity_spin.setRange(0.5, 1.0)
+        self.sensitivity_spin.setSingleStep(0.01)
+        self.sensitivity_spin.setDecimals(2)
+        self.sensitivity_spin.setValue(0.9)
+        self.sensitivity_spin.setToolTip('Sensitivity for selected image (higher = stricter match)')
+        self.img_list.currentRowChanged.connect(self.update_sensitivity_spin)
+        self.sensitivity_spin.valueChanged.connect(self.save_sensitivity_for_image)
         self.btn_add_img = QtWidgets.QPushButton('Add Image')
         self.btn_add_img.clicked.connect(self.add_image_to_step)
         self.btn_del_img = QtWidgets.QPushButton('Delete Image')
@@ -643,6 +652,8 @@ class StepDialog(QtWidgets.QDialog):
         img_layout = QtWidgets.QHBoxLayout()
         img_list_layout = QtWidgets.QVBoxLayout()
         img_list_layout.addWidget(self.img_list)
+        img_list_layout.addWidget(QtWidgets.QLabel('Sensitivity:'))
+        img_list_layout.addWidget(self.sensitivity_spin)
         img_list_layout.addWidget(self.btn_add_img)
         img_list_layout.addWidget(self.btn_del_img)
         img_list_layout.addWidget(self.btn_rename_img)
@@ -780,7 +791,7 @@ class StepDialog(QtWidgets.QDialog):
 
                 if cropped_pixmap.save(path, "PNG"):
                     logger.info(f"Screenshot saved to {path}")
-                    img_obj = {'path': path, 'region': [rect.x(), rect.y(), rect.width(), rect.height()], 'name': name}
+                    img_obj = {'path': path, 'region': [rect.x(), rect.y(), rect.width(), rect.height()], 'name': name, 'sensitivity': 0.9}
                     self.images.append(img_obj)
                     self.img_list.addItem(name)
                 else:
@@ -795,6 +806,21 @@ class StepDialog(QtWidgets.QDialog):
             self.img_preview.setPixmap(pixmap.scaled(self.img_preview.size(), QtCore.Qt.AspectRatioMode.KeepAspectRatio, QtCore.Qt.TransformationMode.SmoothTransformation))
         else:
             self.img_preview.setText('Image Preview')
+
+    def update_sensitivity_spin(self, idx):
+        if idx < 0 or idx >= len(self.images):
+            self.sensitivity_spin.setValue(0.9)
+            self.sensitivity_spin.setEnabled(False)
+            return
+        self.sensitivity_spin.setEnabled(True)
+        img = self.images[idx]
+        self.sensitivity_spin.setValue(img.get('sensitivity', 0.9))
+
+    def save_sensitivity_for_image(self, value):
+        idx = self.img_list.currentRow()
+        if idx < 0 or idx >= len(self.images):
+            return
+        self.images[idx]['sensitivity'] = value
 
     def delete_image(self):
         idx = self.img_list.currentRow()
