@@ -148,7 +148,7 @@ class MainWindow(QtWidgets.QMainWindow):
                                 continue
                             res = cv2.matchTemplate(screen_np, template, cv2.TM_CCOEFF_NORMED)
                             min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
-                            logger.debug(f"Detection for {img['name']}: max_val={max_val}")
+                            # logger.debug(f"Detection for {img['name']}: max_val={max_val}")  # Suppressed per request
                             sensitivity = img.get('sensitivity', 0.9)
                             if max_val > sensitivity:
                                 detections[img['name']] = (max_loc, template.shape)
@@ -164,7 +164,7 @@ class MainWindow(QtWidgets.QMainWindow):
                         trigger = len(found) == len(step.get('images', []))
                     else:
                         trigger = len(found) > 0
-                    logger.debug(f"Step '{step.get('name', 'step')}' trigger check: found={found}, cond={cond}, trigger={trigger}")
+                    # logger.debug(f"Step '{step.get('name', 'step')}' trigger check: found={found}, cond={cond}, trigger={trigger}")  # Suppressed per request
                     if trigger:
                         self.set_state(f'Performing step: {step.get("name", "step")})')
                         logger.info(f"Found match for step: {step.get('name', 'step')}. Performing actions.")
