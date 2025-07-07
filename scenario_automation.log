@@ -862,3 +862,9 @@ AttributeError: 'StepDialog' object has no attribute 'delete_image'
 [2025-07-07 10:34:04,100] DEBUG: Refreshing steps list.
 [2025-07-07 10:34:39,704] DEBUG: StepDialog.add_image_to_step: Minimizing all windows for screenshot.
 [2025-07-07 10:34:40,404] DEBUG: StepDialog.add_image_to_step: Screenshot taken with mss.
+[2025-07-07 10:47:03,580] DEBUG: Loading scenarios...
+[2025-07-07 10:47:03,582] INFO: Scenario selected: Test
+[2025-07-07 10:47:03,598] INFO: Scenario 'Test' loaded.
+[2025-07-07 10:47:03,601] DEBUG: Refreshing steps list.
+[2025-07-07 10:47:28,143] INFO: Screenshot retaken and saved to scenarios\Test\steps\gfv\gu.png
+[2025-07-07 10:47:37,358] INFO: Screenshot retaken and saved to scenarios\Test\steps\gfv\gu.png
