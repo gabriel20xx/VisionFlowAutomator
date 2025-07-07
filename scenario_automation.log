@@ -169,3 +169,696 @@ AttributeError: 'StepDialog' object has no attribute 'delete_image'
 [2025-07-04 09:24:41,859] DEBUG: add_step: current_scenario=<__main__.Scenario object at 0x0000029B9CEB5E80>, steps=[]
 [2025-07-04 09:24:41,861] DEBUG: add_step: StepDialog created
 [2025-07-04 09:24:43,269] DEBUG: add_step: StepDialog exec result=0
+[2025-07-04 09:28:30,279] DEBUG: Loading scenarios...
+[2025-07-04 09:28:30,281] INFO: Scenario selected: Test
+[2025-07-04 09:28:30,282] INFO: Scenario 'Test' loaded.
+[2025-07-04 09:28:30,285] DEBUG: Refreshing steps list.
+[2025-07-04 09:31:01,297] DEBUG: Loading scenarios...
+[2025-07-04 09:31:01,298] INFO: Scenario selected: Test
+[2025-07-04 09:31:01,299] INFO: Scenario 'Test' loaded.
+[2025-07-04 09:31:01,300] DEBUG: Refreshing steps list.
+[2025-07-04 09:31:05,037] DEBUG: StepDialog.add_image_to_step: Minimizing all windows for screenshot.
+[2025-07-04 09:31:05,793] DEBUG: StepDialog.add_image_to_step: Screenshot taken with mss.
+[2025-07-04 09:31:05,900] DEBUG: CropDialog showEvent triggered.
+[2025-07-04 09:31:05,901] DEBUG: CropDialog initialized. Fullscreen borderless window shown.
+[2025-07-04 09:31:05,901] DEBUG: CropDialog showEvent triggered.
+[2025-07-04 09:31:07,563] DEBUG: StepDialog.add_image_to_step: Minimizing all windows for screenshot.
+[2025-07-04 09:31:08,278] DEBUG: StepDialog.add_image_to_step: Screenshot taken with mss.
+[2025-07-04 09:31:08,361] DEBUG: CropDialog showEvent triggered.
+[2025-07-04 09:31:08,361] DEBUG: CropDialog showEvent triggered.
+[2025-07-04 09:31:08,375] DEBUG: CropDialog showEvent triggered.
+[2025-07-04 09:31:08,382] DEBUG: CropDialog initialized. Fullscreen borderless window shown.
+[2025-07-04 09:31:08,382] DEBUG: CropDialog showEvent triggered.
+[2025-07-04 09:31:13,275] DEBUG: StepDialog.add_image_to_step: Minimizing all windows for screenshot.
+[2025-07-04 09:31:13,966] DEBUG: StepDialog.add_image_to_step: Screenshot taken with mss.
+[2025-07-04 09:31:14,052] DEBUG: CropDialog showEvent triggered.
+[2025-07-04 09:31:14,053] DEBUG: CropDialog showEvent triggered.
+[2025-07-04 09:31:14,053] DEBUG: CropDialog showEvent triggered.
+[2025-07-04 09:31:14,053] DEBUG: CropDialog showEvent triggered.
+[2025-07-04 09:31:14,069] DEBUG: CropDialog showEvent triggered.
+[2025-07-04 09:31:14,077] DEBUG: CropDialog initialized. Fullscreen borderless window shown.
+[2025-07-04 09:31:14,078] DEBUG: CropDialog showEvent triggered.
+[2025-07-04 09:31:17,296] DEBUG: EventFilter: Forwarding mouse event 2 from label to dialog.
+[2025-07-04 09:31:17,297] DEBUG: mousePressEvent: pos=PyQt6.QtCore.QPointF(26.66666666666663, 15.666666666666629)
+[2025-07-04 09:31:17,433] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:17,434] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(29, 22)
+[2025-07-04 09:31:17,526] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:17,527] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(29, 23)
+[2025-07-04 09:31:17,533] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:17,533] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(31, 24)
+[2025-07-04 09:31:17,541] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:17,541] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(33, 24)
+[2025-07-04 09:31:17,549] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:17,550] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(34, 25)
+[2025-07-04 09:31:17,556] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:17,556] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(37, 26)
+[2025-07-04 09:31:17,564] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:17,565] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(39, 29)
+[2025-07-04 09:31:17,571] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:17,572] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(43, 32)
+[2025-07-04 09:31:17,579] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:17,580] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(46, 33)
+[2025-07-04 09:31:17,587] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:17,587] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(49, 36)
+[2025-07-04 09:31:17,595] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:17,596] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(52, 38)
+[2025-07-04 09:31:17,602] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:17,603] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(53, 40)
+[2025-07-04 09:31:17,610] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:17,611] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(56, 43)
+[2025-07-04 09:31:17,618] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:17,618] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(58, 44)
+[2025-07-04 09:31:17,626] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:17,627] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(59, 46)
+[2025-07-04 09:31:17,633] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:17,633] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(61, 47)
+[2025-07-04 09:31:17,641] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:17,641] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(63, 48)
+[2025-07-04 09:31:17,648] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:17,649] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(63, 50)
+[2025-07-04 09:31:17,656] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:17,657] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(64, 51)
+[2025-07-04 09:31:17,664] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:17,664] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(65, 52)
+[2025-07-04 09:31:17,671] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:17,672] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(66, 52)
+[2025-07-04 09:31:17,679] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:17,679] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(66, 53)
+[2025-07-04 09:31:17,687] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:17,687] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(66, 54)
+[2025-07-04 09:31:17,694] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:17,695] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(67, 54)
+[2025-07-04 09:31:17,702] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:17,702] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(67, 54)
+[2025-07-04 09:31:17,710] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:17,711] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(67, 55)
+[2025-07-04 09:31:17,718] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:17,718] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(68, 55)
+[2025-07-04 09:31:17,726] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:17,726] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(69, 55)
+[2025-07-04 09:31:17,733] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:17,734] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(69, 56)
+[2025-07-04 09:31:18,084] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,085] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(143, -112)
+[2025-07-04 09:31:18,088] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,088] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(143, -113)
+[2025-07-04 09:31:18,095] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,096] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(144, -114)
+[2025-07-04 09:31:18,102] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,103] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(145, -116)
+[2025-07-04 09:31:18,110] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,110] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(145, -116)
+[2025-07-04 09:31:18,118] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,118] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(145, -117)
+[2025-07-04 09:31:18,125] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,125] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(146, -118)
+[2025-07-04 09:31:18,132] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,132] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(146, -118)
+[2025-07-04 09:31:18,140] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,140] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(147, -118)
+[2025-07-04 09:31:18,155] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,156] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(147, -119)
+[2025-07-04 09:31:18,163] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,164] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(79, 183)
+[2025-07-04 09:31:18,226] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,226] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(79, 182)
+[2025-07-04 09:31:18,233] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,233] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(78, 180)
+[2025-07-04 09:31:18,240] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,241] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(77, 179)
+[2025-07-04 09:31:18,248] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,249] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(77, 177)
+[2025-07-04 09:31:18,256] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,256] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(75, 175)
+[2025-07-04 09:31:18,263] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,264] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(73, 173)
+[2025-07-04 09:31:18,271] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,272] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(72, 171)
+[2025-07-04 09:31:18,279] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,279] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(71, 170)
+[2025-07-04 09:31:18,287] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,287] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(68, 168)
+[2025-07-04 09:31:18,294] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,294] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(66, 166)
+[2025-07-04 09:31:18,302] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,303] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(65, 165)
+[2025-07-04 09:31:18,310] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,310] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(63, 164)
+[2025-07-04 09:31:18,317] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,318] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(62, 163)
+[2025-07-04 09:31:18,325] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,326] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(61, 162)
+[2025-07-04 09:31:18,333] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,333] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(60, 161)
+[2025-07-04 09:31:18,340] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,341] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(59, 161)
+[2025-07-04 09:31:18,348] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,349] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(58, 160)
+[2025-07-04 09:31:18,356] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,356] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(57, 160)
+[2025-07-04 09:31:18,364] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,364] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(57, 160)
+[2025-07-04 09:31:18,371] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,371] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(57, 159)
+[2025-07-04 09:31:18,379] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,379] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(55, 158)
+[2025-07-04 09:31:18,395] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,395] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(54, 158)
+[2025-07-04 09:31:18,402] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,402] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(54, 157)
+[2025-07-04 09:31:18,410] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,410] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(53, 157)
+[2025-07-04 09:31:18,417] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,418] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(53, 156)
+[2025-07-04 09:31:18,425] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,426] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(53, 156)
+[2025-07-04 09:31:18,433] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,433] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(52, 156)
+[2025-07-04 09:31:18,441] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,441] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(52, 155)
+[2025-07-04 09:31:18,448] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,449] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(51, 155)
+[2025-07-04 09:31:18,456] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,456] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(51, 154)
+[2025-07-04 09:31:18,464] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,464] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(51, 154)
+[2025-07-04 09:31:18,471] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,472] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(50, 154)
+[2025-07-04 09:31:18,479] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,479] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(49, 153)
+[2025-07-04 09:31:18,487] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,487] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(49, 152)
+[2025-07-04 09:31:18,502] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,502] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(49, 152)
+[2025-07-04 09:31:18,517] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,518] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(48, 150)
+[2025-07-04 09:31:18,525] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,525] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(47, 150)
+[2025-07-04 09:31:18,533] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,533] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(47, 149)
+[2025-07-04 09:31:18,540] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,541] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(47, 148)
+[2025-07-04 09:31:18,548] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,549] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(46, 146)
+[2025-07-04 09:31:18,556] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,556] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(45, 145)
+[2025-07-04 09:31:18,563] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,564] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(45, 144)
+[2025-07-04 09:31:18,571] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,571] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(43, 142)
+[2025-07-04 09:31:18,579] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,579] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(43, 139)
+[2025-07-04 09:31:18,586] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,586] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(33, 23)
+[2025-07-04 09:31:18,594] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,594] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(33, 18)
+[2025-07-04 09:31:18,602] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,602] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(33, 14)
+[2025-07-04 09:31:18,610] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,610] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(32, 12)
+[2025-07-04 09:31:18,618] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,618] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(30, 10)
+[2025-07-04 09:31:18,625] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,626] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(29, 7)
+[2025-07-04 09:31:18,633] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,634] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(29, 4)
+[2025-07-04 09:31:18,640] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,641] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(27, 0)
+[2025-07-04 09:31:18,648] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,649] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(26, -4)
+[2025-07-04 09:31:18,656] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,656] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(25, -8)
+[2025-07-04 09:31:18,663] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,663] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(25, -12)
+[2025-07-04 09:31:18,671] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,671] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(25, -16)
+[2025-07-04 09:31:18,679] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,679] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(24, -20)
+[2025-07-04 09:31:18,686] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,687] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(24, -24)
+[2025-07-04 09:31:18,694] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,694] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(24, -28)
+[2025-07-04 09:31:18,702] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,702] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(24, -30)
+[2025-07-04 09:31:18,709] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,710] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(24, -32)
+[2025-07-04 09:31:18,717] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,717] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(24, -34)
+[2025-07-04 09:31:18,726] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,726] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(24, -36)
+[2025-07-04 09:31:18,732] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,733] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(24, -37)
+[2025-07-04 09:31:18,740] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,741] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(24, -38)
+[2025-07-04 09:31:18,748] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,749] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(24, -40)
+[2025-07-04 09:31:18,756] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,756] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(24, -41)
+[2025-07-04 09:31:18,763] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,764] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(24, -42)
+[2025-07-04 09:31:18,771] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,772] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(24, -43)
+[2025-07-04 09:31:18,778] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,779] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(24, -46)
+[2025-07-04 09:31:18,787] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,787] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(24, -47)
+[2025-07-04 09:31:18,794] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,794] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(24, -48)
+[2025-07-04 09:31:18,802] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,802] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(24, -49)
+[2025-07-04 09:31:18,809] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,810] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(24, -50)
+[2025-07-04 09:31:18,817] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,818] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(24, -51)
+[2025-07-04 09:31:18,825] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,826] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(24, -52)
+[2025-07-04 09:31:18,832] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,833] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(24, -52)
+[2025-07-04 09:31:18,840] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,841] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(24, -53)
+[2025-07-04 09:31:18,856] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,856] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(24, -54)
+[2025-07-04 09:31:18,943] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,944] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(24, -53)
+[2025-07-04 09:31:18,950] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,951] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(24, -52)
+[2025-07-04 09:31:18,963] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,964] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(23, -52)
+[2025-07-04 09:31:18,969] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,970] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(23, -51)
+[2025-07-04 09:31:18,980] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,980] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(22, -50)
+[2025-07-04 09:31:18,987] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,987] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(21, -50)
+[2025-07-04 09:31:18,994] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:18,995] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(21, -50)
+[2025-07-04 09:31:19,002] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,002] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(21, -49)
+[2025-07-04 09:31:19,018] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,018] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(21, -48)
+[2025-07-04 09:31:19,025] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,025] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(21, -47)
+[2025-07-04 09:31:19,032] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,033] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(21, -46)
+[2025-07-04 09:31:19,040] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,041] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(21, -44)
+[2025-07-04 09:31:19,048] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,048] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(21, -42)
+[2025-07-04 09:31:19,055] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,056] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(21, -40)
+[2025-07-04 09:31:19,063] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,064] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(21, -37)
+[2025-07-04 09:31:19,071] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,071] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(21, -34)
+[2025-07-04 09:31:19,078] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,079] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(22, -31)
+[2025-07-04 09:31:19,086] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,086] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(23, -27)
+[2025-07-04 09:31:19,094] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,094] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(23, -24)
+[2025-07-04 09:31:19,102] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,102] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(23, -22)
+[2025-07-04 09:31:19,109] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,110] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(24, -20)
+[2025-07-04 09:31:19,117] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,118] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(24, -16)
+[2025-07-04 09:31:19,126] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,126] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(25, -15)
+[2025-07-04 09:31:19,132] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,132] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(25, -13)
+[2025-07-04 09:31:19,141] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,141] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(25, -12)
+[2025-07-04 09:31:19,148] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,149] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(25, -10)
+[2025-07-04 09:31:19,155] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,155] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(26, -10)
+[2025-07-04 09:31:19,163] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,163] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(26, -8)
+[2025-07-04 09:31:19,178] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,179] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(26, -8)
+[2025-07-04 09:31:19,194] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,194] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(26, -7)
+[2025-07-04 09:31:19,201] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,202] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(27, -6)
+[2025-07-04 09:31:19,209] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,209] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(27, -5)
+[2025-07-04 09:31:19,217] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,217] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(27, -4)
+[2025-07-04 09:31:19,225] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,226] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(28, -4)
+[2025-07-04 09:31:19,232] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,232] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(28, -3)
+[2025-07-04 09:31:19,240] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,241] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(29, -2)
+[2025-07-04 09:31:19,247] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,248] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(29, 0)
+[2025-07-04 09:31:19,256] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,256] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(29, 1)
+[2025-07-04 09:31:19,263] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,263] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(30, 2)
+[2025-07-04 09:31:19,271] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,271] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(31, 3)
+[2025-07-04 09:31:19,278] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,279] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(31, 4)
+[2025-07-04 09:31:19,286] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,286] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(31, 5)
+[2025-07-04 09:31:19,294] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,294] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(31, 6)
+[2025-07-04 09:31:19,301] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,302] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(31, 8)
+[2025-07-04 09:31:19,309] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,309] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(32, 8)
+[2025-07-04 09:31:19,317] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,317] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(33, 9)
+[2025-07-04 09:31:19,325] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,325] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(33, 10)
+[2025-07-04 09:31:19,333] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,333] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(33, 12)
+[2025-07-04 09:31:19,340] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,341] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(34, 13)
+[2025-07-04 09:31:19,348] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,348] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(34, 14)
+[2025-07-04 09:31:19,355] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,356] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(35, 15)
+[2025-07-04 09:31:19,363] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,363] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(35, 16)
+[2025-07-04 09:31:19,371] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,371] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(35, 18)
+[2025-07-04 09:31:19,378] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,379] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(36, 18)
+[2025-07-04 09:31:19,386] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,386] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(37, 19)
+[2025-07-04 09:31:19,394] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,394] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(37, 20)
+[2025-07-04 09:31:19,401] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,402] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(37, 20)
+[2025-07-04 09:31:19,409] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,409] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(37, 21)
+[2025-07-04 09:31:19,417] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,417] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(38, 22)
+[2025-07-04 09:31:19,425] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,426] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(38, 22)
+[2025-07-04 09:31:19,440] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,441] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(39, 23)
+[2025-07-04 09:31:19,448] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,448] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(39, 24)
+[2025-07-04 09:31:19,456] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,456] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(39, 24)
+[2025-07-04 09:31:19,463] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,463] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(40, 24)
+[2025-07-04 09:31:19,478] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,478] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(41, 24)
+[2025-07-04 09:31:19,487] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,487] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(41, 25)
+[2025-07-04 09:31:19,493] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,494] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(41, 26)
+[2025-07-04 09:31:19,502] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,502] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(42, 26)
+[2025-07-04 09:31:19,509] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,509] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(42, 26)
+[2025-07-04 09:31:19,517] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,518] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(42, 27)
+[2025-07-04 09:31:19,525] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,525] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(43, 27)
+[2025-07-04 09:31:19,532] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,533] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(43, 28)
+[2025-07-04 09:31:19,540] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,540] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(43, 28)
+[2025-07-04 09:31:19,548] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,548] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(44, 28)
+[2025-07-04 09:31:19,555] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,556] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(45, 28)
+[2025-07-04 09:31:19,563] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,563] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(45, 29)
+[2025-07-04 09:31:19,570] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,571] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(45, 29)
+[2025-07-04 09:31:19,578] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,578] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(45, 30)
+[2025-07-04 09:31:19,586] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,586] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(46, 30)
+[2025-07-04 09:31:19,593] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,594] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(47, 30)
+[2025-07-04 09:31:19,602] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,602] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(48, 31)
+[2025-07-04 09:31:19,609] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,609] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(49, 32)
+[2025-07-04 09:31:19,617] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,617] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(49, 32)
+[2025-07-04 09:31:19,625] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,625] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(50, 32)
+[2025-07-04 09:31:19,647] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,648] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(51, 33)
+[2025-07-04 09:31:19,655] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,655] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(51, 34)
+[2025-07-04 09:31:19,663] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,664] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(52, 34)
+[2025-07-04 09:31:19,671] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,671] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(53, 34)
+[2025-07-04 09:31:19,678] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,679] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(53, 35)
+[2025-07-04 09:31:19,686] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,686] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(53, 35)
+[2025-07-04 09:31:19,693] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,694] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(54, 36)
+[2025-07-04 09:31:19,701] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,701] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(54, 36)
+[2025-07-04 09:31:19,709] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,709] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(55, 36)
+[2025-07-04 09:31:19,717] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,717] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(55, 37)
+[2025-07-04 09:31:19,763] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,763] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(55, 37)
+[2025-07-04 09:31:19,824] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,825] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(56, 37)
+[2025-07-04 09:31:19,952] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,953] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(56, 38)
+[2025-07-04 09:31:19,963] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:19,964] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(56, 38)
+[2025-07-04 09:31:20,181] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:20,182] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(57, 38)
+[2025-07-04 09:31:20,189] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:20,191] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(57, 39)
+[2025-07-04 09:31:20,198] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:20,199] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(57, 40)
+[2025-07-04 09:31:20,211] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:20,211] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(57, 40)
+[2025-07-04 09:31:20,217] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:20,217] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(57, 41)
+[2025-07-04 09:31:20,249] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:20,249] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(58, 41)
+[2025-07-04 09:31:20,255] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:20,255] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(58, 42)
+[2025-07-04 09:31:20,271] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:20,271] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(59, 42)
+[2025-07-04 09:31:20,286] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:20,287] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(59, 43)
+[2025-07-04 09:31:20,309] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:20,309] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(59, 44)
+[2025-07-04 09:31:20,316] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:20,317] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(59, 44)
+[2025-07-04 09:31:20,332] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:20,332] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(59, 44)
+[2025-07-04 09:31:20,340] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:20,340] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(59, 45)
+[2025-07-04 09:31:20,355] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:20,356] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(60, 46)
+[2025-07-04 09:31:20,363] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:20,364] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(61, 46)
+[2025-07-04 09:31:20,378] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:20,378] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(61, 47)
+[2025-07-04 09:31:20,385] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:20,386] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(61, 48)
+[2025-07-04 09:31:20,393] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:20,393] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(61, 48)
+[2025-07-04 09:31:20,401] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:20,401] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(61, 48)
+[2025-07-04 09:31:20,409] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:20,409] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(62, 48)
+[2025-07-04 09:31:20,424] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:20,424] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(63, 49)
+[2025-07-04 09:31:20,432] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:20,432] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(63, 50)
+[2025-07-04 09:31:20,448] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:20,448] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(63, 50)
+[2025-07-04 09:31:20,455] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:20,456] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(63, 51)
+[2025-07-04 09:31:20,470] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:20,471] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(64, 52)
+[2025-07-04 09:31:20,478] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:20,478] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(64, 52)
+[2025-07-04 09:31:20,493] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:20,494] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(65, 52)
+[2025-07-04 09:31:20,501] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:20,501] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(65, 53)
+[2025-07-04 09:31:20,508] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:20,509] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(65, 53)
+[2025-07-04 09:31:20,516] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:20,517] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(65, 54)
+[2025-07-04 09:31:20,524] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:20,524] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(65, 54)
+[2025-07-04 09:31:20,556] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:20,556] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(65, 55)
+[2025-07-04 09:31:20,663] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:20,664] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(66, 56)
+[2025-07-04 09:31:20,779] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:20,779] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(67, 56)
+[2025-07-04 09:31:21,009] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:21,010] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(67, 55)
+[2025-07-04 09:31:21,017] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:21,017] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(67, 54)
+[2025-07-04 09:31:21,025] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:21,025] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(67, 54)
+[2025-07-04 09:31:21,032] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:21,032] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(67, 52)
+[2025-07-04 09:31:21,047] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:21,047] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(67, 52)
+[2025-07-04 09:31:21,054] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:21,055] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(67, 50)
+[2025-07-04 09:31:21,062] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:21,062] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(67, 50)
+[2025-07-04 09:31:21,070] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:21,070] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(67, 49)
+[2025-07-04 09:31:21,077] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:21,078] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(67, 48)
+[2025-07-04 09:31:21,093] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:21,093] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(67, 47)
+[2025-07-04 09:31:21,101] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:21,101] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(66, 46)
+[2025-07-04 09:31:21,108] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:21,109] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(66, 45)
+[2025-07-04 09:31:21,116] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:21,117] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(66, 44)
+[2025-07-04 09:31:21,124] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:21,124] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(65, 44)
+[2025-07-04 09:31:21,132] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:21,132] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(65, 43)
+[2025-07-04 09:31:21,140] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:21,140] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(65, 42)
+[2025-07-04 09:31:21,147] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:21,148] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(64, 42)
+[2025-07-04 09:31:21,154] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:21,155] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(63, 41)
+[2025-07-04 09:31:21,162] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:21,163] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(63, 40)
+[2025-07-04 09:31:21,170] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:21,170] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(63, 39)
+[2025-07-04 09:31:21,178] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:21,178] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(63, 38)
+[2025-07-04 09:31:21,185] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:21,185] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(63, 38)
+[2025-07-04 09:31:21,193] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:21,193] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(62, 37)
+[2025-07-04 09:31:21,201] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:21,201] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(61, 36)
+[2025-07-04 09:31:21,208] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:21,209] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(61, 35)
+[2025-07-04 09:31:21,216] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:21,216] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(61, 35)
+[2025-07-04 09:31:21,224] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:21,224] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(60, 34)
+[2025-07-04 09:31:21,231] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:21,232] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(60, 34)
+[2025-07-04 09:31:21,240] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:21,241] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(59, 34)
+[2025-07-04 09:31:21,255] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:21,255] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(59, 33)
+[2025-07-04 09:31:21,270] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:21,270] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(59, 32)
+[2025-07-04 09:31:21,370] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:21,370] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(59, 32)
+[2025-07-04 09:31:21,408] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:21,408] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(59, 31)
+[2025-07-04 09:31:21,416] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:21,416] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(59, 30)
+[2025-07-04 09:31:21,424] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:21,424] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(58, 30)
+[2025-07-04 09:31:21,440] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:21,440] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(57, 29)
+[2025-07-04 09:31:21,447] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:21,447] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(57, 28)
+[2025-07-04 09:31:21,454] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:21,455] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(57, 27)
+[2025-07-04 09:31:21,462] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:21,462] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(56, 27)
+[2025-07-04 09:31:21,470] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:21,470] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(55, 26)
+[2025-07-04 09:31:21,477] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:21,478] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(55, 26)
+[2025-07-04 09:31:21,485] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:21,485] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(55, 24)
+[2025-07-04 09:31:21,508] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:21,509] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(55, 24)
+[2025-07-04 09:31:21,525] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:21,526] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(55, 23)
+[2025-07-04 09:31:21,532] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:21,532] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(55, 22)
+[2025-07-04 09:31:21,547] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:21,547] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(55, 22)
+[2025-07-04 09:31:21,562] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:21,562] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(54, 21)
+[2025-07-04 09:31:21,577] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:21,578] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(53, 20)
+[2025-07-04 09:31:21,625] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:21,625] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(53, 20)
+[2025-07-04 09:31:21,637] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:21,638] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(52, 19)
+[2025-07-04 09:31:21,651] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:21,652] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(51, 18)
+[2025-07-04 09:31:21,657] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:21,658] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(51, 18)
+[2025-07-04 09:31:21,670] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:21,670] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(51, 17)
+[2025-07-04 09:31:21,678] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:21,678] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(50, 16)
+[2025-07-04 09:31:21,693] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:21,693] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(49, 16)
+[2025-07-04 09:31:21,700] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:21,700] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(49, 16)
+[2025-07-04 09:31:21,716] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:21,717] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(48, 15)
+[2025-07-04 09:31:21,724] DEBUG: EventFilter: Forwarding mouse event 5 from label to dialog.
+[2025-07-04 09:31:21,724] DEBUG: mouseMoveEvent: start=PyQt6.QtCore.QPoint(27, 16), current=PyQt6.QtCore.QPoint(47, 14)
+[2025-07-04 09:31:21,887] DEBUG: EventFilter: Forwarding mouse event 3 from label to dialog.
+[2025-07-04 09:31:21,887] DEBUG: mouseReleaseEvent: selection_rect=PyQt6.QtCore.QRect(27, 15, 21, 1)
+[2025-07-04 09:31:21,887] DEBUG: StepDialog.add_image_to_step: Crop rect: PyQt6.QtCore.QRect(27, 15, 21, 1)
+[2025-07-04 09:32:13,642] DEBUG: Loading scenarios...
+[2025-07-04 09:32:13,643] INFO: Scenario selected: Test
+[2025-07-04 09:32:13,644] INFO: Scenario 'Test' loaded.
+[2025-07-04 09:32:13,646] DEBUG: Refreshing steps list.
+[2025-07-04 09:32:17,197] DEBUG: StepDialog.add_image_to_step: Minimizing all windows for screenshot.
+[2025-07-04 09:32:17,918] DEBUG: StepDialog.add_image_to_step: Screenshot taken with mss.
+[2025-07-04 09:32:18,018] DEBUG: CropDialog showEvent triggered.
+[2025-07-04 09:32:18,030] DEBUG: CropDialog initialized. Fullscreen borderless window shown.
+[2025-07-04 09:32:18,031] DEBUG: CropDialog showEvent triggered.
+[2025-07-07 10:10:00,362] DEBUG: Loading scenarios...
+[2025-07-07 10:10:00,367] INFO: Scenario selected: Test
+[2025-07-07 10:10:00,410] INFO: Scenario 'Test' loaded.
+[2025-07-07 10:10:00,412] DEBUG: Refreshing steps list.
+[2025-07-07 10:10:06,074] DEBUG: StepDialog.add_image_to_step: Minimizing all windows for screenshot.
+[2025-07-07 10:10:07,050] DEBUG: StepDialog.add_image_to_step: Screenshot taken with mss.
+[2025-07-07 10:10:07,202] DEBUG: CropDialog showEvent triggered.
+[2025-07-07 10:10:07,217] DEBUG: CropDialog initialized. Fullscreen borderless window shown.
+[2025-07-07 10:10:07,218] DEBUG: CropDialog showEvent triggered.
+[2025-07-07 10:25:03,519] DEBUG: Loading scenarios...
+[2025-07-07 10:25:03,520] INFO: Scenario selected: Test
+[2025-07-07 10:25:03,523] INFO: Scenario 'Test' loaded.
+[2025-07-07 10:25:03,530] DEBUG: Refreshing steps list.
+[2025-07-07 10:25:07,355] DEBUG: StepDialog.add_image_to_step: Minimizing all windows for screenshot.
+[2025-07-07 10:25:08,251] DEBUG: StepDialog.add_image_to_step: Screenshot taken with mss.
+[2025-07-07 10:25:23,042] INFO: Screenshot saved to scenarios\Test\steps\dwwd\dwd.png
+[2025-07-07 10:28:11,509] DEBUG: Loading scenarios...
+[2025-07-07 10:28:11,510] INFO: Scenario selected: Test
+[2025-07-07 10:28:11,511] INFO: Scenario 'Test' loaded.
+[2025-07-07 10:28:11,512] DEBUG: Refreshing steps list.
+[2025-07-07 10:28:24,293] DEBUG: StepDialog.add_image_to_step: Minimizing all windows for screenshot.
+[2025-07-07 10:28:25,035] DEBUG: StepDialog.add_image_to_step: Screenshot taken with mss.
+[2025-07-07 10:28:38,003] INFO: Screenshot saved to scenarios\Test\steps\gfv\gu.png
+[2025-07-07 10:31:06,109] INFO: Scenario 'Test' saved.
+[2025-07-07 10:31:06,109] DEBUG: Refreshing steps list.
+[2025-07-07 10:31:06,109] INFO: Added step: {'name': 'gfv', 'condition': 'OR', 'images': [{'path': 'scenarios\\Test\\steps\\gfv\\gu.png', 'region': [1369, 417, 213, 158], 'name': 'gu'}], 'actions': []}
+[2025-07-07 10:34:04,030] DEBUG: Loading scenarios...
+[2025-07-07 10:34:04,032] INFO: Scenario selected: Test
+[2025-07-07 10:34:04,088] INFO: Scenario 'Test' loaded.
+[2025-07-07 10:34:04,100] DEBUG: Refreshing steps list.
+[2025-07-07 10:34:39,704] DEBUG: StepDialog.add_image_to_step: Minimizing all windows for screenshot.
+[2025-07-07 10:34:40,404] DEBUG: StepDialog.add_image_to_step: Screenshot taken with mss.
