@@ -293,17 +293,17 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def toggle_automation(self):
         """
-        Toggle the automation state (start/stop), but prevent toggling twice within 5 seconds.
+        Toggle the automation state (start/stop). A debounce delay is added only
+        when changing from stop to start, not from start to stop.
         """
-        now = time.time()
-        if now - self.last_toggle_time < 5:
-            logger.info("Start/Stop toggle ignored: pressed too quickly.")
-            QtWidgets.QMessageBox.information(self, "Wait", "Please wait at least 5 seconds before toggling again.")
-            return
-        self.last_toggle_time = now
         if self.running:
             self.stop_automation()
         else:
+            now = time.time()
+            if now - self.last_toggle_time < 5:
+                logger.info("Start toggle ignored: pressed too quickly after stopping.")
+                QtWidgets.QMessageBox.information(self, "Wait", "Please wait at least 5 seconds before starting again.")
+                return
             self.start_automation()
 
     def start_automation(self):
@@ -328,6 +328,7 @@ class MainWindow(QtWidgets.QMainWindow):
         """
         logger.info('Stopping automation.')
         self.running = False
+        self.last_toggle_time = time.time()
         self.set_state('Paused')
         self.btn_start_stop.setText(f'Start ({self.hotkey.upper()})')
         if self.listener:
@@ -482,7 +483,7 @@ class MainWindow(QtWidgets.QMainWindow):
         start_state_group.setTitle("")
         start_state_group.setSizePolicy(QtWidgets.QSizePolicy.Policy.Preferred, QtWidgets.QSizePolicy.Policy.Fixed)
         start_state_layout = QtWidgets.QHBoxLayout()
-        start_state_layout.setSpacing(12)  # Fixed gap between button and label
+        start_state_layout.setSpacing(6)  # Fixed gap between button and label
         start_state_layout.addWidget(self.btn_start_stop)
         start_state_layout.addWidget(self.state_label)
         start_state_layout.addStretch(1)
