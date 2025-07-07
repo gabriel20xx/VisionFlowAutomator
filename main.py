@@ -368,9 +368,18 @@ class MainWindow(QtWidgets.QMainWindow):
         layout.setRowStretch(0, 0)  # Scenario group should not stretch vertically
         layout.addWidget(steps_group_box, 1, 0, 3, 5)
 
-        # Start/State row
-        layout.addWidget(self.btn_start_stop, 5, 0, 1, 1, alignment=QtCore.Qt.AlignmentFlag.AlignLeft)
-        layout.addWidget(self.state_label, 5, 1, 1, 1, alignment=QtCore.Qt.AlignmentFlag.AlignLeft)
+        # Start/State row in a group
+        start_state_group = QtWidgets.QGroupBox()
+        start_state_group.setTitle("")
+        start_state_group.setSizePolicy(QtWidgets.QSizePolicy.Policy.Preferred, QtWidgets.QSizePolicy.Policy.Fixed)
+        start_state_layout = QtWidgets.QHBoxLayout()
+        start_state_layout.setSpacing(12)  # Fixed gap between button and label
+        start_state_layout.addWidget(self.btn_start_stop)
+        start_state_layout.addWidget(self.state_label)
+        start_state_layout.addStretch(1)
+        start_state_group.setLayout(start_state_layout)
+        layout.addWidget(start_state_group, 5, 0, 1, 5)
+        layout.setRowStretch(5, 0)  # Prevent vertical stretch
 
         # Set central widget
         central = QtWidgets.QWidget()
