@@ -257,7 +257,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.setWindowTitle('Scenario Image Automation')
         # Make window smaller and more compact
         min_width = 480
-        min_height = 360
+        min_height = 480
         self.setMinimumSize(min_width, min_height)
         self.setGeometry(100, 100, min_width, min_height)
         self.running = False
