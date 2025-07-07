@@ -597,15 +597,16 @@ class MainWindow(QtWidgets.QMainWindow):
         try:
             dlg = StepDialog(self)
             dlg.setWindowFlags(dlg.windowFlags() | QtCore.Qt.WindowType.WindowStaysOnTopHint)
+            # Only process if the dialog was accepted
             if dlg.exec():
                 step = dlg.get_step()
                 self.current_scenario.steps.append(step)
+                self.current_scenario.save()
+                self.refresh_lists()
+                logger.info(f'Added step: {step}')
         finally:
             self.setWindowState(QtCore.Qt.WindowState.WindowNoState)
             self.activateWindow()
-            self.current_scenario.save()
-            self.refresh_lists()
-            logger.info(f'Added step: {step}')
 
     def edit_step(self):
         """
@@ -619,14 +620,15 @@ class MainWindow(QtWidgets.QMainWindow):
         try:
             dlg = StepDialog(self, step)
             dlg.setWindowFlags(dlg.windowFlags() | QtCore.Qt.WindowType.WindowStaysOnTopHint)
+            # Only process if the dialog was accepted
             if dlg.exec():
                 self.current_scenario.steps[idx] = dlg.get_step()
+                self.current_scenario.save()
+                self.refresh_lists()
+                logger.info(f'Edited step at idx {idx}')
         finally:
             self.setWindowState(QtCore.Qt.WindowState.WindowNoState)
             self.activateWindow()
-            self.current_scenario.save()
-            self.refresh_lists()
-            logger.info(f'Edited step at idx {idx}')
 
     def delete_step(self):
         """
@@ -852,11 +854,13 @@ class MainWindow(QtWidgets.QMainWindow):
             acts = ','.join([a.get('type', 'action') for a in step.get('actions', [])])
             self.steps_list.addItem(f"{name} [{cond}] imgs: {imgs} actions: {acts}")
 
-    def refresh_window_list(self):
+    def refresh_window_list(self, keep_selection=False):
         """
         Populate the window selection dropdown with all open windows and 'Entire Screen'.
+        If keep_selection is True, try to keep the current selection.
         """
         self.window_combo.blockSignals(True)
+        current = self.window_combo.currentText() if keep_selection else None
         self.window_combo.clear()
         self.window_combo.addItem('Entire Screen')
         try:
@@ -866,6 +870,10 @@ class MainWindow(QtWidgets.QMainWindow):
                     self.window_combo.addItem(title)
         except Exception as e:
             logger.error(f'Error listing windows: {e}')
+        if keep_selection and current:
+            idx = self.window_combo.findText(current)
+            if idx != -1:
+                self.window_combo.setCurrentIndex(idx)
         self.window_combo.blockSignals(False)
 
     def save_selected_window(self):
@@ -889,21 +897,30 @@ class MainWindow(QtWidgets.QMainWindow):
         if self.current_scenario:
             scenario_dir = self.current_scenario.get_scenario_dir()
             config_path = os.path.join(scenario_dir, 'window_config.json')
+            
+            # Default to 'Entire Screen'
+            win_name = 'Entire Screen'
+            
             if os.path.exists(config_path):
                 try:
                     with open(config_path, 'r') as f:
                         data = json.load(f)
                         win_name = data.get('selected_window', 'Entire Screen')
-                        self.refresh_window_list()
-                        idx = self.window_combo.findText(win_name)
-                        if idx != -1:
-                            self.window_combo.setCurrentIndex(idx)
-                        else:
-                            self.window_combo.setCurrentIndex(0)
                 except Exception as e:
                     logger.error(f'Failed to load window selection: {e}')
-            else:
-                self.window_combo.setCurrentIndex(0)
+
+            # Use a single shot timer to set the index after the event loop has processed
+            def set_window():
+                self.refresh_window_list() # Refresh list first
+                idx = self.window_combo.findText(win_name)
+                if idx != -1:
+                    self.window_combo.setCurrentIndex(idx)
+                    logger.info(f"UI: Set window to '{win_name}' from config.")
+                else:
+                    self.window_combo.setCurrentIndex(0)
+                    logger.warning(f"UI: Saved window '{win_name}' not found. Defaulting to 'Entire Screen'.")
+
+            QtCore.QTimer.singleShot(100, set_window)
 # StepDialog for creating/editing a step
 class StepDialog(QtWidgets.QDialog):
     """
