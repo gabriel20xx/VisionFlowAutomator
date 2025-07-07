@@ -8,6 +8,7 @@ import zipfile
 import shutil
 from PyQt6 import QtWidgets, QtGui, QtCore
 import cv2
+import pygetwindow as gw
 import numpy as np
 import pyautogui
 from pynput import keyboard
@@ -135,7 +136,28 @@ class MainWindow(QtWidgets.QMainWindow):
             while self.running:
                 # Only update the state label, do not log every loop
                 self.set_state('Looking for matches')
-                screen = pyautogui.screenshot()
+                selected_window = self.window_combo.currentText()
+                if selected_window == 'Entire Screen':
+                    screen = pyautogui.screenshot()
+                    offset_x, offset_y = 0, 0
+                else:
+                    try:
+                        win = None
+                        for w in gw.getAllWindows():
+                            if w.title == selected_window:
+                                win = w
+                                break
+                        if win is not None and win.isVisible:
+                            x, y, w_, h_ = win.left, win.top, win.width, win.height
+                            screen = pyautogui.screenshot(region=(x, y, w_, h_))
+                            offset_x, offset_y = x, y
+                        else:
+                            screen = pyautogui.screenshot()
+                            offset_x, offset_y = 0, 0
+                    except Exception as e:
+                        logger.error(f'Error capturing window screenshot: {e}')
+                        screen = pyautogui.screenshot()
+                        offset_x, offset_y = 0, 0
                 screen_np = cv2.cvtColor(np.array(screen), cv2.COLOR_RGB2BGR)
                 for step in self.current_scenario.steps:
                     # Detect all images for this step
@@ -151,7 +173,9 @@ class MainWindow(QtWidgets.QMainWindow):
                             # logger.debug(f"Detection for {img['name']}: max_val={max_val}")  # Suppressed per request
                             sensitivity = img.get('sensitivity', 0.9)
                             if max_val > sensitivity:
-                                detections[img['name']] = (max_loc, template.shape)
+                                # Adjust detected location to be relative to the full screen
+                                abs_loc = (max_loc[0] + offset_x, max_loc[1] + offset_y)
+                                detections[img['name']] = (abs_loc, template.shape)
                         except Exception as e:
                             logger.error(f"Error in image detection for {img['name']}: {e}")
                     # Check condition
@@ -294,6 +318,14 @@ class MainWindow(QtWidgets.QMainWindow):
         self.combo.setMinimumWidth(90)
         self.combo.currentIndexChanged.connect(self.select_scenario)
         scenario_group_layout.addWidget(self.combo)
+
+        # Window selection dropdown
+        self.window_combo = QtWidgets.QComboBox()
+        self.window_combo.setMinimumWidth(90)
+        scenario_group_layout.addWidget(QtWidgets.QLabel('Target Window:'))
+        scenario_group_layout.addWidget(self.window_combo)
+        self.window_combo.currentIndexChanged.connect(self.save_selected_window)
+        self.refresh_window_list()
         # Scenario actions
         self.btn_new = QtWidgets.QPushButton('New')
         self.btn_new.setToolTip('Create new scenario')
@@ -456,6 +488,8 @@ class MainWindow(QtWidgets.QMainWindow):
         for name in scenarios:
             self.combo.addItem(name)
 
+        self.refresh_window_list()
+
         if not scenarios:
             name, ok = QtWidgets.QInputDialog.getText(self, 'New Scenario', 'No scenarios found. Enter a name for your first scenario:')
             if ok and name:
@@ -480,6 +514,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.current_scenario = Scenario.load(name)
             self.save_last_scenario(name)
             self.refresh_lists()
+            self.load_selected_window_from_config()
 
     def create_scenario(self):
         name, ok = QtWidgets.QInputDialog.getText(self, 'New Scenario', 'Enter scenario name:')
@@ -603,6 +638,50 @@ class MainWindow(QtWidgets.QMainWindow):
             imgs = ','.join([img.get('name', 'img') for img in step.get('images', [])])
             acts = ','.join([a.get('type', 'action') for a in step.get('actions', [])])
             self.steps_list.addItem(f"{name} [{cond}] imgs: {imgs} actions: {acts}")
+
+    def refresh_window_list(self):
+        self.window_combo.blockSignals(True)
+        self.window_combo.clear()
+        self.window_combo.addItem('Entire Screen')
+        try:
+            windows = gw.getAllTitles()
+            for title in windows:
+                if title.strip():
+                    self.window_combo.addItem(title)
+        except Exception as e:
+            logger.error(f'Error listing windows: {e}')
+        self.window_combo.blockSignals(False)
+
+    def save_selected_window(self):
+        if self.current_scenario:
+            selected_window = self.window_combo.currentText()
+            scenario_dir = self.current_scenario.get_scenario_dir()
+            config_path = os.path.join(scenario_dir, 'window_config.json')
+            try:
+                with open(config_path, 'w') as f:
+                    json.dump({'selected_window': selected_window}, f)
+            except Exception as e:
+                logger.error(f'Failed to save window selection: {e}')
+
+    def load_selected_window_from_config(self):
+        if self.current_scenario:
+            scenario_dir = self.current_scenario.get_scenario_dir()
+            config_path = os.path.join(scenario_dir, 'window_config.json')
+            if os.path.exists(config_path):
+                try:
+                    with open(config_path, 'r') as f:
+                        data = json.load(f)
+                        win_name = data.get('selected_window', 'Entire Screen')
+                        self.refresh_window_list()
+                        idx = self.window_combo.findText(win_name)
+                        if idx != -1:
+                            self.window_combo.setCurrentIndex(idx)
+                        else:
+                            self.window_combo.setCurrentIndex(0)
+                except Exception as e:
+                    logger.error(f'Failed to load window selection: {e}')
+            else:
+                self.window_combo.setCurrentIndex(0)
 # StepDialog for creating/editing a step
 class StepDialog(QtWidgets.QDialog):
     def __init__(self, parent=None, step=None):
