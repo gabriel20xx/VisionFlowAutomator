@@ -261,7 +261,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.setMinimumSize(min_width, min_height)
         self.setGeometry(100, 100, min_width, min_height)
         self.running = False
-        self.hotkey = 'f9'
+        self.hotkey = '<f9>'
         self.listener = None
         self.worker = None
         self.current_scenario = None
