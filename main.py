@@ -490,14 +490,14 @@ class MainWindow(QtWidgets.QMainWindow):
         layout.addWidget(start_state_group, 5, 0, 1, 5)
         layout.setRowStretch(5, 0)  # Prevent vertical stretch
 
-    def _log_btn_refresh_windows(self):
-        logger.info("UI: Refresh Windows button pressed")
-        self.refresh_window_list()
-
-        # Set central widget
+        # Set central widget (must be at the end of init_ui)
         central = QtWidgets.QWidget()
         central.setLayout(layout)
         self.setCentralWidget(central)
+
+    def _log_btn_refresh_windows(self):
+        logger.info("UI: Refresh Windows button pressed")
+        self.refresh_window_list()
 
     def _log_combo_scenario(self, idx):
         """
