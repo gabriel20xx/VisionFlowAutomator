@@ -355,6 +355,7 @@ class MainWindow(QtWidgets.QMainWindow):
         # State label
         self.state_label = QtWidgets.QLabel('State: Paused')
         self.state_label.setStyleSheet('font-weight: bold; font-size: 11pt; color: #0055aa;')
+        self.state_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignLeft | QtCore.Qt.AlignmentFlag.AlignVCenter)
 
         # Main layout
         layout = QtWidgets.QGridLayout()
@@ -368,8 +369,8 @@ class MainWindow(QtWidgets.QMainWindow):
         layout.addWidget(steps_group_box, 1, 0, 3, 5)
 
         # Start/State row
-        layout.addWidget(self.btn_start_stop, 5, 1)
-        layout.addWidget(self.state_label, 5, 2, 1, 2)
+        layout.addWidget(self.btn_start_stop, 5, 0, 1, 1, alignment=QtCore.Qt.AlignmentFlag.AlignLeft)
+        layout.addWidget(self.state_label, 5, 1, 1, 1, alignment=QtCore.Qt.AlignmentFlag.AlignLeft)
 
         # Set central widget
         central = QtWidgets.QWidget()
