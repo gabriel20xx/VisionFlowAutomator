@@ -237,7 +237,7 @@ class MainWindow(QtWidgets.QMainWindow):
             return
         self.running = True
         self.set_state('Looking for matches')
-        self.btn_start_stop.setText('Stop')
+        self.btn_start_stop.setText(f'Stop ({self.hotkey.upper()})')
         self.worker = threading.Thread(target=self.automation_loop, daemon=True)
         self.worker.start()
         self.listener = keyboard.GlobalHotKeys({self.hotkey: self.stop_automation})
@@ -247,7 +247,7 @@ class MainWindow(QtWidgets.QMainWindow):
         logger.info('Stopping automation.')
         self.running = False
         self.set_state('Paused')
-        self.btn_start_stop.setText('Start')
+        self.btn_start_stop.setText(f'Start ({self.hotkey.upper()})')
         if self.listener:
             self.listener.stop()
             self.listener = None
@@ -261,7 +261,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.setMinimumSize(min_width, min_height)
         self.setGeometry(100, 100, min_width, min_height)
         self.running = False
-        self.hotkey = '<ctrl>+<alt>+s'
+        self.hotkey = 'f9'
         self.listener = None
         self.worker = None
         self.current_scenario = None
@@ -348,7 +348,7 @@ class MainWindow(QtWidgets.QMainWindow):
         steps_group_box.setLayout(steps_group_layout)
 
         # Start/Stop Combined
-        self.btn_start_stop = QtWidgets.QPushButton('Start')
+        self.btn_start_stop = QtWidgets.QPushButton(f'Start ({self.hotkey.upper()})')
         self.btn_start_stop.setMinimumWidth(80)
         self.btn_start_stop.clicked.connect(self.toggle_automation)
 
