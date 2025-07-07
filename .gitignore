@@ -3,4 +3,4 @@
 .vscode
 .github
 scenarios/*
-scenario_automation.log
+logs/*

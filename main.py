@@ -16,12 +16,18 @@ from pynput import keyboard
 import tkinter as tk
 from PIL import ImageGrab, Image, ImageTk
 
+
+# Setup logs directory
+LOGS_DIR = 'logs'
+if not os.path.exists(LOGS_DIR):
+    os.makedirs(LOGS_DIR)
+
 # Setup logging
 logging.basicConfig(
     level=logging.DEBUG,
     format='[%(asctime)s] %(levelname)s: %(message)s',
     handlers=[
-        logging.FileHandler('scenario_automation.log', encoding='utf-8'),
+        logging.FileHandler(os.path.join(LOGS_DIR, 'scenario_automation.log'), encoding='utf-8'),
         logging.StreamHandler()
     ]
 )
@@ -163,12 +169,52 @@ class MainWindow(QtWidgets.QMainWindow):
                         ref_img = found[0] if found else step.get('images', [])[0]
                         loc, shape = detections.get(ref_img.get('name'), ((0, 0), (0, 0, 0)))
                         for act in step.get('actions', []):
-                            self.perform_step_action(act, loc, shape)
+                            self._perform_step_action(act, loc, shape)
                         logger.info(f"Performed actions for step: {step.get('name', 'step')}")
                         time.sleep(1)  # Prevent spamming
                 time.sleep(0.2)
         except Exception as e:
             logger.error(f'Automation loop error: {e}')
+
+    def _perform_step_action(self, action, loc, shape):
+        act_type = action['type']
+        params = action['params']
+        logger.debug(f'Performing step action: {act_type}, params={params}, loc={loc}, shape={shape}')
+        try:
+            if act_type == 'click':
+                pos_type = params.get('pos_type', 'center')
+                if pos_type == 'center':
+                    x = loc[0] + shape[1] // 2
+                    y = loc[1] + shape[0] // 2
+                elif pos_type == 'relative':
+                    x = loc[0] + params.get('rel_x', 0)
+                    y = loc[1] + params.get('rel_y', 0)
+                elif pos_type == 'absolute':
+                    x = params.get('abs_x', 0)
+                    y = params.get('abs_y', 0)
+                else:
+                    x, y = loc[0], loc[1]
+                button = params.get('button', 'left')
+                logger.info(f'Clicking at ({x}, {y}) with button {button}')
+                pyautogui.click(x, y, button=button)
+            elif act_type == 'key':
+                key = params.get('key', 'enter')
+                logger.info(f'Pressing key: {key}')
+                pyautogui.press(key)
+            elif act_type == 'scroll':
+                amount = params.get('amount', 0)
+                direction = params.get('direction', 'up')
+                logger.info(f'Scrolling: {amount} direction: {direction}')
+                if direction == 'up':
+                    pyautogui.scroll(amount)
+                else:
+                    pyautogui.scroll(-abs(amount))
+            elif act_type == 'delay':
+                duration = params.get('duration', 1)
+                logger.info(f'Delay for {duration} seconds')
+                time.sleep(duration)
+        except Exception as e:
+            logger.error(f'Error performing step action {act_type}: {e}')
     def start_automation(self):
         logger.info('Starting automation.')
         if not self.current_scenario or self.running:
@@ -251,11 +297,16 @@ class MainWindow(QtWidgets.QMainWindow):
         self.selected_step_idx = idx
 
     def add_step(self):
-        dlg = StepDialog(self)
-        dlg.setWindowFlags(dlg.windowFlags() | QtCore.Qt.WindowType.WindowStaysOnTopHint)
-        if dlg.exec():
-            step = dlg.get_step()
-            self.current_scenario.steps.append(step)
+        self.setWindowState(QtCore.Qt.WindowState.WindowMinimized)
+        try:
+            dlg = StepDialog(self)
+            dlg.setWindowFlags(dlg.windowFlags() | QtCore.Qt.WindowType.WindowStaysOnTopHint)
+            if dlg.exec():
+                step = dlg.get_step()
+                self.current_scenario.steps.append(step)
+        finally:
+            self.setWindowState(QtCore.Qt.WindowState.WindowNoState)
+            self.activateWindow()
             self.current_scenario.save()
             self.refresh_lists()
             logger.info(f'Added step: {step}')
@@ -265,10 +316,15 @@ class MainWindow(QtWidgets.QMainWindow):
         if idx is None or idx < 0 or idx >= len(self.current_scenario.steps):
             return
         step = self.current_scenario.steps[idx]
-        dlg = StepDialog(self, step)
-        dlg.setWindowFlags(dlg.windowFlags() | QtCore.Qt.WindowType.WindowStaysOnTopHint)
-        if dlg.exec():
-            self.current_scenario.steps[idx] = dlg.get_step()
+        self.setWindowState(QtCore.Qt.WindowState.WindowMinimized)
+        try:
+            dlg = StepDialog(self, step)
+            dlg.setWindowFlags(dlg.windowFlags() | QtCore.Qt.WindowType.WindowStaysOnTopHint)
+            if dlg.exec():
+                self.current_scenario.steps[idx] = dlg.get_step()
+        finally:
+            self.setWindowState(QtCore.Qt.WindowState.WindowNoState)
+            self.activateWindow()
             self.current_scenario.save()
             self.refresh_lists()
             logger.info(f'Edited step at idx {idx}')
@@ -562,13 +618,8 @@ class StepDialog(QtWidgets.QDialog):
 
         logger.debug("StepDialog.add_image_to_step: Minimizing all windows for screenshot.")
         all_windows = QtWidgets.QApplication.topLevelWidgets()
-        window_states = {}
-        
-        # Store current window states and minimize all windows
         for w in all_windows:
-            if w.isVisible():
-                window_states[w] = w.windowState()
-                w.setWindowState(QtCore.Qt.WindowState.WindowMinimized)
+            w.setWindowState(QtCore.Qt.WindowState.WindowMinimized)
 
         QtWidgets.QApplication.processEvents()
         time.sleep(0.5)
@@ -593,31 +644,18 @@ class StepDialog(QtWidgets.QDialog):
         except Exception as e:
             logger.error(f"StepDialog.add_image_to_step: Screenshot failed: {e}")
             QtWidgets.QMessageBox.critical(self, 'Error', f'Failed to take screenshot: {e}')
-            # Restore all windows to their original states
-            for w, state in window_states.items():
-                w.setWindowState(state)
+            for w in all_windows:
+                w.setWindowState(QtCore.Qt.WindowState.WindowNoState)
                 w.showNormal()
                 w.activateWindow()
             return
         finally:
-            # Restore all windows to their original states
-            for w, state in window_states.items():
-                w.setWindowState(state)
+            for w in all_windows:
+                w.setWindowState(QtCore.Qt.WindowState.WindowNoState)
                 w.showNormal()
                 w.activateWindow()
 
         rect_coords = take_screenshot_with_tkinter()
-        
-        # Ensure windows are properly restored after area selection
-        QtWidgets.QApplication.processEvents()
-        time.sleep(0.2)
-        
-        # Restore main window and step dialog visibility
-        main_window.showNormal()
-        main_window.activateWindow()
-        self.showNormal()
-        self.activateWindow()
-        self.raise_()
         
         if rect_coords and rect_coords["width"] > 0 and rect_coords["height"] > 0:
             
@@ -679,13 +717,8 @@ class StepDialog(QtWidgets.QDialog):
             return
 
         all_windows = QtWidgets.QApplication.topLevelWidgets()
-        window_states = {}
-        
-        # Store current window states and minimize all windows
         for w in all_windows:
-            if w.isVisible():
-                window_states[w] = w.windowState()
-                w.setWindowState(QtCore.Qt.WindowState.WindowMinimized)
+            w.setWindowState(QtCore.Qt.WindowState.WindowMinimized)
 
         time.sleep(0.5)
 
@@ -695,25 +728,12 @@ class StepDialog(QtWidgets.QDialog):
                 raise Exception("Could not get primary screen.")
             full_screenshot_pixmap = screen.grabWindow(0)
         finally:
-            # Restore all windows to their original states
-            for w, state in window_states.items():
-                w.setWindowState(state)
+            for w in all_windows:
+                w.setWindowState(QtCore.Qt.WindowState.WindowNoState)
                 w.showNormal()
                 w.activateWindow()
 
         rect_coords = take_screenshot_with_tkinter()
-
-        # Ensure windows are properly restored after area selection
-        QtWidgets.QApplication.processEvents()
-        time.sleep(0.2)
-        
-        # Restore main window and step dialog visibility
-        main_window = self.parent()
-        main_window.showNormal()
-        main_window.activateWindow()
-        self.showNormal()
-        self.activateWindow()
-        self.raise_()
 
         if rect_coords and rect_coords["width"] > 0 and rect_coords["height"] > 0:
             rect = QtCore.QRect(rect_coords["x"], rect_coords["y"], rect_coords["width"], rect_coords["height"])
