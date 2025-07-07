@@ -37,21 +37,40 @@ if not os.path.exists(CONFIG_DIR):
     os.makedirs(CONFIG_DIR)
 
 class Scenario:
+    """
+    Represents a scenario, which consists of a name and a list of steps.
+    Handles saving/loading scenario data to/from disk.
+    """
     def __init__(self, name, steps=None):
+        """
+        Initialize a Scenario with a name and optional steps.
+        """
         self.name = name
         self.steps = steps or []  # List of Step dicts
 
     def to_dict(self):
+        """
+        Return a dictionary representation of the scenario.
+        """
         return {'name': self.name, 'steps': self.steps}
 
     @staticmethod
     def from_dict(data):
+        """
+        Create a Scenario object from a dictionary.
+        """
         return Scenario(data['name'], data.get('steps', []))
 
     def get_scenario_dir(self):
+        """
+        Return the directory path for this scenario's files.
+        """
         return os.path.join(CONFIG_DIR, self.name)
 
     def save(self):
+        """
+        Save the scenario to disk as a JSON file.
+        """
         try:
             scenario_dir = self.get_scenario_dir()
             if not os.path.exists(scenario_dir):
@@ -65,6 +84,9 @@ class Scenario:
 
     @staticmethod
     def load(name):
+        """
+        Load a scenario from disk by name.
+        """
         try:
             scenario_dir = os.path.join(CONFIG_DIR, name)
             with open(os.path.join(scenario_dir, 'scenario.json'), 'r') as f:
@@ -77,9 +99,16 @@ class Scenario:
 
     @staticmethod
     def list_all():
+        """
+        List all scenario directories.
+        """
         return [d for d in os.listdir(CONFIG_DIR) if os.path.isdir(os.path.join(CONFIG_DIR, d))]
 
 def take_screenshot_with_tkinter():
+    """
+    Use Tkinter to let the user select a region of the screen for a screenshot.
+    Returns a dict with x, y, width, height.
+    """
     root = tk.Tk()
     root.attributes("-alpha", 0.3)
     root.attributes("-fullscreen", True)
@@ -130,7 +159,15 @@ def take_screenshot_with_tkinter():
     return selection_rect
 
 class MainWindow(QtWidgets.QMainWindow):
+    """
+    Main application window for Scenario Image Automation.
+    Handles UI, scenario management, and automation logic.
+    """
     def automation_loop(self):
+        """
+        Main loop for running automation steps. Continuously looks for image matches
+        in the selected window or screen and performs actions as defined in the scenario.
+        """
         logger.info('Automation loop started.')
         try:
             while self.running:
@@ -206,6 +243,9 @@ class MainWindow(QtWidgets.QMainWindow):
             self.set_state('Paused')
 
     def _perform_step_action(self, action, loc, shape):
+        """
+        Perform a single step action (click, key, scroll, delay) at the given location.
+        """
         act_type = action['type']
         params = action['params']
         logger.debug(f'Performing step action: {act_type}, params={params}, loc={loc}, shape={shape}')
@@ -245,16 +285,31 @@ class MainWindow(QtWidgets.QMainWindow):
         except Exception as e:
             logger.error(f'Error performing step action {act_type}: {e}')
     def set_state(self, text):
+        """
+        Update the state label in the UI.
+        """
         self.state_text = text
         self.state_label.setText(f'State: {text}')
 
     def toggle_automation(self):
+        """
+        Toggle the automation state (start/stop), but prevent toggling twice within 5 seconds.
+        """
+        now = time.time()
+        if now - self.last_toggle_time < 5:
+            logger.info("Start/Stop toggle ignored: pressed too quickly.")
+            QtWidgets.QMessageBox.information(self, "Wait", "Please wait at least 5 seconds before toggling again.")
+            return
+        self.last_toggle_time = now
         if self.running:
             self.stop_automation()
         else:
             self.start_automation()
 
     def start_automation(self):
+        """
+        Start the automation process and worker thread.
+        """
         logger.info('Starting automation.')
         if not self.current_scenario or self.running:
             logger.warning('Start Automation: No scenario selected or already running.')
@@ -268,6 +323,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.listener.start()
 
     def stop_automation(self):
+        """
+        Stop the automation process and worker thread.
+        """
         logger.info('Stopping automation.')
         self.running = False
         self.set_state('Paused')
@@ -277,6 +335,9 @@ class MainWindow(QtWidgets.QMainWindow):
             self.listener = None
 
     def __init__(self):
+        """
+        Initialize the main window, UI, and load scenarios.
+        """
         super().__init__()
         self.setWindowTitle('Scenario Image Automation')
         # Make window smaller and more compact
@@ -290,10 +351,15 @@ class MainWindow(QtWidgets.QMainWindow):
         self.worker = None
         self.current_scenario = None
         self.selected_step_idx = None
+        self.last_toggle_time = 0  # For debounce of start/stop
         self.init_ui()
         self.load_scenarios()
 
     def init_ui(self):
+        """
+        Initializes the main UI components and layouts.
+        Sets up scenario and window dropdowns, step list, and action buttons.
+        """
         # Set compact font and style
         font = QtGui.QFont()
         font.setPointSize(9)
@@ -316,7 +382,7 @@ class MainWindow(QtWidgets.QMainWindow):
         scenario_group_layout = QtWidgets.QVBoxLayout()
         self.combo = QtWidgets.QComboBox()
         self.combo.setMinimumWidth(90)
-        self.combo.currentIndexChanged.connect(self.select_scenario)
+        self.combo.currentIndexChanged.connect(self._log_combo_scenario)
         scenario_group_layout.addWidget(self.combo)
 
         # Window selection dropdown
@@ -324,21 +390,21 @@ class MainWindow(QtWidgets.QMainWindow):
         self.window_combo.setMinimumWidth(90)
         scenario_group_layout.addWidget(QtWidgets.QLabel('Target Window:'))
         scenario_group_layout.addWidget(self.window_combo)
-        self.window_combo.currentIndexChanged.connect(self.save_selected_window)
+        self.window_combo.currentIndexChanged.connect(self._log_combo_window)
         self.refresh_window_list()
         # Scenario actions
         self.btn_new = QtWidgets.QPushButton('New')
         self.btn_new.setToolTip('Create new scenario')
-        self.btn_new.clicked.connect(self.create_scenario)
+        self.btn_new.clicked.connect(self._log_btn_new)
         self.btn_import = QtWidgets.QPushButton('Import')
         self.btn_import.setToolTip('Import scenario')
-        self.btn_import.clicked.connect(self.import_scenario)
+        self.btn_import.clicked.connect(self._log_btn_import)
         self.btn_export = QtWidgets.QPushButton('Export')
         self.btn_export.setToolTip('Export scenario')
-        self.btn_export.clicked.connect(self.export_scenario)
+        self.btn_export.clicked.connect(self._log_btn_export)
         self.btn_rename_scenario = QtWidgets.QPushButton("Rename")
         self.btn_rename_scenario.setToolTip('Rename scenario')
-        self.btn_rename_scenario.clicked.connect(self.rename_scenario)
+        self.btn_rename_scenario.clicked.connect(self._log_btn_rename_scenario)
         scenario_btn_group_layout = QtWidgets.QHBoxLayout()
         scenario_btn_group_layout.setSpacing(4)
         scenario_btn_group_layout.setContentsMargins(4, 4, 4, 4)
@@ -354,21 +420,21 @@ class MainWindow(QtWidgets.QMainWindow):
         steps_group_layout = QtWidgets.QVBoxLayout()
         self.steps_list = QtWidgets.QListWidget()
         self.steps_list.setMinimumHeight(120)
-        self.steps_list.currentRowChanged.connect(self.select_step)
+        self.steps_list.currentRowChanged.connect(self._log_steps_list)
         steps_group_layout.addWidget(self.steps_list)
         # Step actions
         self.btn_add_step = QtWidgets.QPushButton('Add')
         self.btn_add_step.setToolTip('Add step')
-        self.btn_add_step.clicked.connect(self.add_step)
+        self.btn_add_step.clicked.connect(self._log_btn_add_step)
         self.btn_edit_step = QtWidgets.QPushButton('Edit')
         self.btn_edit_step.setToolTip('Edit step')
-        self.btn_edit_step.clicked.connect(self.edit_step)
+        self.btn_edit_step.clicked.connect(self._log_btn_edit_step)
         self.btn_del_step = QtWidgets.QPushButton('Delete')
         self.btn_del_step.setToolTip('Delete step')
-        self.btn_del_step.clicked.connect(self.delete_step)
+        self.btn_del_step.clicked.connect(self._log_btn_del_step)
         self.btn_rename_step = QtWidgets.QPushButton("Rename")
         self.btn_rename_step.setToolTip('Rename step')
-        self.btn_rename_step.clicked.connect(self.rename_step)
+        self.btn_rename_step.clicked.connect(self._log_btn_rename_step)
         step_btn_group_layout = QtWidgets.QHBoxLayout()
         step_btn_group_layout.setSpacing(4)
         step_btn_group_layout.setContentsMargins(4, 4, 4, 4)
@@ -382,7 +448,7 @@ class MainWindow(QtWidgets.QMainWindow):
         # Start/Stop Combined
         self.btn_start_stop = QtWidgets.QPushButton(f'Start ({self.hotkey.upper()})')
         self.btn_start_stop.setMinimumWidth(80)
-        self.btn_start_stop.clicked.connect(self.toggle_automation)
+        self.btn_start_stop.clicked.connect(self._log_btn_start_stop)
 
         # State label
         self.state_label = QtWidgets.QLabel('State: Paused')
@@ -418,10 +484,100 @@ class MainWindow(QtWidgets.QMainWindow):
         central.setLayout(layout)
         self.setCentralWidget(central)
 
+    def _log_combo_scenario(self, idx):
+        """
+        Log scenario combo box change and call select_scenario.
+        """
+        logger.info(f"UI: Scenario combo changed to index {idx} ({self.combo.currentText()})")
+        self.select_scenario()
+
+    def _log_combo_window(self, idx):
+        """
+        Log window combo box change and call save_selected_window.
+        """
+        logger.info(f"UI: Window combo changed to index {idx} ({self.window_combo.currentText()})")
+        self.save_selected_window()
+
+    def _log_btn_new(self):
+        """
+        Log New Scenario button press and call create_scenario.
+        """
+        logger.info("UI: New Scenario button pressed")
+        self.create_scenario()
+
+    def _log_btn_import(self):
+        """
+        Log Import Scenario button press and call import_scenario.
+        """
+        logger.info("UI: Import Scenario button pressed")
+        self.import_scenario()
+
+    def _log_btn_export(self):
+        """
+        Log Export Scenario button press and call export_scenario.
+        """
+        logger.info("UI: Export Scenario button pressed")
+        self.export_scenario()
+
+    def _log_btn_rename_scenario(self):
+        """
+        Log Rename Scenario button press and call rename_scenario.
+        """
+        logger.info("UI: Rename Scenario button pressed")
+        self.rename_scenario()
+
+    def _log_steps_list(self, idx):
+        """
+        Log steps list row change and call select_step.
+        """
+        logger.info(f"UI: Steps list row changed to {idx}")
+        self.select_step(idx)
+
+    def _log_btn_add_step(self):
+        """
+        Log Add Step button press and call add_step.
+        """
+        logger.info("UI: Add Step button pressed")
+        self.add_step()
+
+    def _log_btn_edit_step(self):
+        """
+        Log Edit Step button press and call edit_step.
+        """
+        logger.info("UI: Edit Step button pressed")
+        self.edit_step()
+
+    def _log_btn_del_step(self):
+        """
+        Log Delete Step button press and call delete_step.
+        """
+        logger.info("UI: Delete Step button pressed")
+        self.delete_step()
+
+    def _log_btn_rename_step(self):
+        """
+        Log Rename Step button press and call rename_step.
+        """
+        logger.info("UI: Rename Step button pressed")
+        self.rename_step()
+
+    def _log_btn_start_stop(self):
+        """
+        Log Start/Stop button press and call toggle_automation.
+        """
+        logger.info("UI: Start/Stop button pressed")
+        self.toggle_automation()
+
     def select_step(self, idx):
+        """
+        Set the selected step index in the UI.
+        """
         self.selected_step_idx = idx
 
     def add_step(self):
+        """
+        Open the dialog to add a new step to the current scenario.
+        """
         self.setWindowState(QtCore.Qt.WindowState.WindowMinimized)
         try:
             dlg = StepDialog(self)
@@ -437,6 +593,9 @@ class MainWindow(QtWidgets.QMainWindow):
             logger.info(f'Added step: {step}')
 
     def edit_step(self):
+        """
+        Open the dialog to edit the selected step in the current scenario.
+        """
         idx = self.selected_step_idx
         if idx is None or idx < 0 or idx >= len(self.current_scenario.steps):
             return
@@ -455,6 +614,9 @@ class MainWindow(QtWidgets.QMainWindow):
             logger.info(f'Edited step at idx {idx}')
 
     def delete_step(self):
+        """
+        Delete the selected step from the current scenario.
+        """
         idx = self.selected_step_idx
         if idx is None or idx < 0 or idx >= len(self.current_scenario.steps):
             return
@@ -464,6 +626,9 @@ class MainWindow(QtWidgets.QMainWindow):
         logger.info(f'Deleted step at idx {idx}')
 
     def save_last_scenario(self, name):
+        """
+        Save the name of the last selected scenario to disk.
+        """
         try:
             with open(os.path.join(CONFIG_DIR, 'last_scenario.txt'), 'w') as f:
                 f.write(name)
@@ -471,6 +636,9 @@ class MainWindow(QtWidgets.QMainWindow):
             logger.error(f"Could not save last scenario: {e}")
 
     def read_last_scenario(self):
+        """
+        Read the name of the last selected scenario from disk.
+        """
         try:
             path = os.path.join(CONFIG_DIR, 'last_scenario.txt')
             if not os.path.exists(path):
@@ -482,6 +650,9 @@ class MainWindow(QtWidgets.QMainWindow):
             return None
 
     def load_scenarios(self):
+        """
+        Load all scenarios and populate the scenario combo box.
+        """
         logger.debug('Loading scenarios...')
         self.combo.clear()
         scenarios = Scenario.list_all()
@@ -508,6 +679,9 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.combo.setCurrentIndex(0)
 
     def select_scenario(self):
+        """
+        Load the selected scenario and update the UI.
+        """
         name = self.combo.currentText()
         logger.info(f'Scenario selected: {name}')
         if name:
@@ -517,6 +691,9 @@ class MainWindow(QtWidgets.QMainWindow):
             self.load_selected_window_from_config()
 
     def create_scenario(self):
+        """
+        Open a dialog to create a new scenario.
+        """
         name, ok = QtWidgets.QInputDialog.getText(self, 'New Scenario', 'Enter scenario name:')
         if ok and name:
             logger.info(f'Creating new scenario: {name}')
@@ -526,6 +703,9 @@ class MainWindow(QtWidgets.QMainWindow):
             self.combo.setCurrentText(name)
 
     def rename_scenario(self):
+        """
+        Open a dialog to rename the current scenario.
+        """
         if not self.current_scenario:
             return
         
@@ -550,6 +730,9 @@ class MainWindow(QtWidgets.QMainWindow):
             self.combo.setCurrentText(new_name)
 
     def rename_step(self):
+        """
+        Open a dialog to rename the selected step.
+        """
         if not self.current_scenario or self.selected_step_idx is None:
             return
 
@@ -563,6 +746,9 @@ class MainWindow(QtWidgets.QMainWindow):
             self.refresh_lists()
 
     def import_scenario(self):
+        """
+        Open a file dialog to import a scenario from a zip file.
+        """
         path, _ = QtWidgets.QFileDialog.getOpenFileName(self, 'Import Scenario', '', 'ZIP Files (*.zip)')
         if path:
             try:
@@ -596,6 +782,9 @@ class MainWindow(QtWidgets.QMainWindow):
                 QtWidgets.QMessageBox.critical(self, "Import Error", f"Failed to import scenario.\n{e}")
 
     def export_scenario(self):
+        """
+        Open a file dialog to export the current scenario to a zip file.
+        """
         if not self.current_scenario:
             logger.warning('No scenario selected for export.')
             return
@@ -618,6 +807,12 @@ class MainWindow(QtWidgets.QMainWindow):
 
     
     def add_action(self):
+        """
+        Open the dialog to add a new action to the step.
+        """
+        """
+        Open the dialog to add an action to the current scenario.
+        """
         logger.debug('Add Action: Opening action dialog.')
         dlg = ActionDialog(self, self.current_scenario.images)
         if dlg.exec():
@@ -628,6 +823,9 @@ class MainWindow(QtWidgets.QMainWindow):
             logger.info(f'Action added: {action}')
 
     def refresh_lists(self):
+        """
+        Refresh the step list widget with the current scenario's steps.
+        """
         logger.debug('Refreshing steps list.')
         self.steps_list.clear()
         if not self.current_scenario:
@@ -640,6 +838,9 @@ class MainWindow(QtWidgets.QMainWindow):
             self.steps_list.addItem(f"{name} [{cond}] imgs: {imgs} actions: {acts}")
 
     def refresh_window_list(self):
+        """
+        Populate the window selection dropdown with all open windows and 'Entire Screen'.
+        """
         self.window_combo.blockSignals(True)
         self.window_combo.clear()
         self.window_combo.addItem('Entire Screen')
@@ -653,6 +854,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.window_combo.blockSignals(False)
 
     def save_selected_window(self):
+        """
+        Save the currently selected window to the scenario's config file.
+        """
         if self.current_scenario:
             selected_window = self.window_combo.currentText()
             scenario_dir = self.current_scenario.get_scenario_dir()
@@ -664,6 +868,9 @@ class MainWindow(QtWidgets.QMainWindow):
                 logger.error(f'Failed to save window selection: {e}')
 
     def load_selected_window_from_config(self):
+        """
+        Load the selected window from the scenario's config file and update the dropdown.
+        """
         if self.current_scenario:
             scenario_dir = self.current_scenario.get_scenario_dir()
             config_path = os.path.join(scenario_dir, 'window_config.json')
@@ -684,7 +891,14 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.window_combo.setCurrentIndex(0)
 # StepDialog for creating/editing a step
 class StepDialog(QtWidgets.QDialog):
+    """
+    Dialog for creating or editing a step in a scenario.
+    Allows editing images, actions, and step properties.
+    """
     def __init__(self, parent=None, step=None):
+        """
+        Initialize the StepDialog for creating or editing a step.
+        """
         super().__init__(parent)
         self.setWindowTitle('Step Editor')
         self.resize(600, 400)
@@ -769,6 +983,9 @@ class StepDialog(QtWidgets.QDialog):
         self.setLayout(layout)
 
     def move_action_up(self):
+        """
+        Move the selected action up in the action list.
+        """
         idx = self.act_list.currentRow()
         if idx > 0:
             self.actions[idx-1], self.actions[idx] = self.actions[idx], self.actions[idx-1]
@@ -777,6 +994,9 @@ class StepDialog(QtWidgets.QDialog):
             self.act_list.setCurrentRow(idx-1)
 
     def move_action_down(self):
+        """
+        Move the selected action down in the action list.
+        """
         idx = self.act_list.currentRow()
         if idx < len(self.actions) - 1 and idx >= 0:
             self.actions[idx+1], self.actions[idx] = self.actions[idx], self.actions[idx+1]
@@ -786,6 +1006,9 @@ class StepDialog(QtWidgets.QDialog):
 
     class NameImageDialog(QtWidgets.QDialog):
         def __init__(self, pixmap, parent=None):
+            """
+            Initialize the dialog for naming a new image.
+            """
             super().__init__(parent)
             self.setWindowTitle("Name Your Image")
             
@@ -810,10 +1033,16 @@ class StepDialog(QtWidgets.QDialog):
             layout.addWidget(button_box)
 
         def get_name(self):
+            """
+            Return the entered image name.
+            """
             return self.name_edit.text()
 
 
     def add_image_to_step(self):
+        """
+        Add a new image to the step by taking a screenshot and letting the user select a region.
+        """
         main_window = self.parent()
         step_name = self.name_edit.text()
         if not step_name:
@@ -888,6 +1117,9 @@ class StepDialog(QtWidgets.QDialog):
                     QtWidgets.QMessageBox.critical(self, 'Error', 'Failed to save the screenshot file.')
 
     def update_image_preview(self, current, previous):
+        """
+        Update the image preview label when a new image is selected.
+        """
         if current:
             idx = self.img_list.row(current)
             path = self.images[idx]['path']
@@ -897,6 +1129,9 @@ class StepDialog(QtWidgets.QDialog):
             self.img_preview.setText('Image Preview')
 
     def update_sensitivity_spin(self, idx):
+        """
+        Update the sensitivity spinbox for the selected image.
+        """
         if idx < 0 or idx >= len(self.images):
             self.sensitivity_spin.setValue(0.9)
             self.sensitivity_spin.setEnabled(False)
@@ -906,18 +1141,27 @@ class StepDialog(QtWidgets.QDialog):
         self.sensitivity_spin.setValue(img.get('sensitivity', 0.9))
 
     def save_sensitivity_for_image(self, value):
+        """
+        Save the sensitivity value for the currently selected image.
+        """
         idx = self.img_list.currentRow()
         if idx < 0 or idx >= len(self.images):
             return
         self.images[idx]['sensitivity'] = value
 
     def delete_image(self):
+        """
+        Delete the currently selected image from the step.
+        """
         idx = self.img_list.currentRow()
         if idx >= 0:
             self.images.pop(idx)
             self.img_list.takeItem(idx)
 
     def rename_image(self):
+        """
+        Open a dialog to rename the currently selected image.
+        """
         idx = self.img_list.currentRow()
         if idx < 0:
             return
@@ -931,6 +1175,9 @@ class StepDialog(QtWidgets.QDialog):
             self.img_list.item(idx).setText(new_name)
 
     def retake_screenshot(self):
+        """
+        Retake the screenshot for the currently selected image.
+        """
         idx = self.img_list.currentRow()
         if idx < 0:
             return
@@ -977,12 +1224,18 @@ class StepDialog(QtWidgets.QDialog):
             self.act_list.addItem(act.get('type', 'action'))
 
     def delete_action(self):
+        """
+        Delete the currently selected action from the step.
+        """
         idx = self.act_list.currentRow()
         if idx >= 0:
             self.actions.pop(idx)
             self.act_list.takeItem(idx)
 
     def get_step(self):
+        """
+        Return the step as a dictionary for saving.
+        """
         return {
             'name': self.name_edit.text(),
             'condition': self.cond_combo.currentText(),
@@ -992,7 +1245,14 @@ class StepDialog(QtWidgets.QDialog):
 
 # StepActionDialog for adding actions to a step
 class StepActionDialog(QtWidgets.QDialog):
+    """
+    Dialog for adding or editing an action for a step.
+    Supports click, key, scroll, and delay actions.
+    """
     def __init__(self, parent=None):
+        """
+        Initialize the StepActionDialog for adding or editing a step action.
+        """
         super().__init__(parent)
         self.setWindowTitle('Add Action')
         self.type_combo = QtWidgets.QComboBox()
@@ -1074,6 +1334,9 @@ class StepActionDialog(QtWidgets.QDialog):
         self.update_fields()
 
     def update_fields(self):
+        """
+        Update the visibility of fields based on the selected action type.
+        """
         t = self.type_combo.currentText()
         self.click_group.setVisible(t == 'click')
         self.scroll_group.setVisible(t == 'scroll')
@@ -1102,6 +1365,9 @@ class StepActionDialog(QtWidgets.QDialog):
             self.click_group.setVisible(False)
 
     def pick_absolute_position(self):
+        """
+        Open an overlay to pick an absolute position on the screen.
+        """
         # Overlay to pick a position on screen
         class PosOverlay(QtWidgets.QWidget):
             pos_picked = QtCore.pyqtSignal(int, int)
@@ -1121,10 +1387,16 @@ class StepActionDialog(QtWidgets.QDialog):
         overlay.showFullScreen()
 
     def set_absolute_position(self, x, y):
+        """
+        Set the absolute position fields to the picked coordinates.
+        """
         self.abs_x_spin.setValue(x)
         self.abs_y_spin.setValue(y)
 
     def capture_key(self):
+        """
+        Open a dialog to capture a key press from the user.
+        """
         # Open a modal dialog to capture a key press
         dlg = QtWidgets.QDialog(self)
         dlg.setWindowTitle('Press a key')
@@ -1155,6 +1427,9 @@ class StepActionDialog(QtWidgets.QDialog):
         dlg.exec()
 
     def get_action(self):
+        """
+        Return the action as a dictionary for saving.
+        """
         t = self.type_combo.currentText()
         params = {}
         if t == 'click':
@@ -1178,6 +1453,9 @@ class StepActionDialog(QtWidgets.QDialog):
 
     
     def perform_step_action(self, action, loc, shape):
+        """
+        Perform the given step action at the specified location.
+        """
         act_type = action['type']
         params = action['params']
         logger.debug(f'Performing step action: {act_type}, params={params}, loc={loc}, shape={shape}')
@@ -1218,7 +1496,13 @@ class StepActionDialog(QtWidgets.QDialog):
             logger.error(f'Error performing step action {act_type}: {e}')
 
 class ActionDialog(QtWidgets.QDialog):
+    """
+    Dialog for adding a generic action to a scenario (legacy/unused in main flow).
+    """
     def __init__(self, parent=None, images=None):
+        """
+        Initialize the ActionDialog for adding a generic action.
+        """
         super().__init__(parent)
         self.setWindowTitle('Add Action')
         self.type_combo = QtWidgets.QComboBox()
@@ -1253,6 +1537,9 @@ class ActionDialog(QtWidgets.QDialog):
         self.setLayout(layout)
 
     def get_action(self):
+        """
+        Return the action as a dictionary for saving.
+        """
         try:
             params = json.loads(self.param_edit.text())
         except Exception:
