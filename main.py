@@ -256,9 +256,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.setWindowTitle('Scenario Image Automation')
         # Make window smaller and more compact
         min_width = 480
-        min_height = 320
+        min_height = 360
         self.setMinimumSize(min_width, min_height)
-        self.setGeometry(100, 100, min_width, 400)
+        self.setGeometry(100, 100, min_width, min_height)
         self.running = False
         self.hotkey = '<ctrl>+<alt>+s'
         self.listener = None
@@ -287,6 +287,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # Scenario group (QGroupBox with title 'Scenario')
         scenario_group_box = QtWidgets.QGroupBox('Scenario')
+        scenario_group_box.setSizePolicy(QtWidgets.QSizePolicy.Policy.Preferred, QtWidgets.QSizePolicy.Policy.Fixed)
         scenario_group_layout = QtWidgets.QVBoxLayout()
         self.combo = QtWidgets.QComboBox()
         self.combo.setMinimumWidth(90)
@@ -362,6 +363,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # Scenario and Steps groups in layout
         layout.addWidget(scenario_group_box, 0, 0, 1, 5)
+        layout.setRowStretch(0, 0)  # Scenario group should not stretch vertically
         layout.addWidget(steps_group_box, 1, 0, 3, 5)
 
         # Start/State row
