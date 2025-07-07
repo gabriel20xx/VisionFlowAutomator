@@ -1,4 +1,3 @@
-
 import sys
 import os
 import json
@@ -11,7 +10,6 @@ from PyQt6 import QtWidgets, QtGui, QtCore
 import cv2
 import numpy as np
 import pyautogui
-import mss
 from pynput import keyboard
 import tkinter as tk
 from PIL import ImageGrab, Image, ImageTk
@@ -135,6 +133,8 @@ class MainWindow(QtWidgets.QMainWindow):
         logger.info('Automation loop started.')
         try:
             while self.running:
+                # Only update the state label, do not log every loop
+                self.set_state('Looking for matches')
                 screen = pyautogui.screenshot()
                 screen_np = cv2.cvtColor(np.array(screen), cv2.COLOR_RGB2BGR)
                 for step in self.current_scenario.steps:
@@ -165,6 +165,8 @@ class MainWindow(QtWidgets.QMainWindow):
                         trigger = len(found) > 0
                     logger.debug(f"Step '{step.get('name', 'step')}' trigger check: found={found}, cond={cond}, trigger={trigger}")
                     if trigger:
+                        self.set_state(f'Performing step: {step.get("name", "step")})')
+                        logger.info(f"Found match for step: {step.get('name', 'step')}. Performing actions.")
                         # Use the first detected image for position
                         ref_img = found[0] if found else step.get('images', [])[0]
                         loc, shape = detections.get(ref_img.get('name'), ((0, 0), (0, 0, 0)))
@@ -175,6 +177,8 @@ class MainWindow(QtWidgets.QMainWindow):
                 time.sleep(0.2)
         except Exception as e:
             logger.error(f'Automation loop error: {e}')
+        finally:
+            self.set_state('Paused')
 
     def _perform_step_action(self, action, loc, shape):
         act_type = action['type']
@@ -215,12 +219,24 @@ class MainWindow(QtWidgets.QMainWindow):
                 time.sleep(duration)
         except Exception as e:
             logger.error(f'Error performing step action {act_type}: {e}')
+    def set_state(self, text):
+        self.state_text = text
+        self.state_label.setText(f'State: {text}')
+
+    def toggle_automation(self):
+        if self.running:
+            self.stop_automation()
+        else:
+            self.start_automation()
+
     def start_automation(self):
         logger.info('Starting automation.')
         if not self.current_scenario or self.running:
             logger.warning('Start Automation: No scenario selected or already running.')
             return
         self.running = True
+        self.set_state('Looking for matches')
+        self.btn_start_stop.setText('Stop')
         self.worker = threading.Thread(target=self.automation_loop, daemon=True)
         self.worker.start()
         self.listener = keyboard.GlobalHotKeys({self.hotkey: self.stop_automation})
@@ -229,9 +245,12 @@ class MainWindow(QtWidgets.QMainWindow):
     def stop_automation(self):
         logger.info('Stopping automation.')
         self.running = False
+        self.set_state('Paused')
+        self.btn_start_stop.setText('Start')
         if self.listener:
             self.listener.stop()
             self.listener = None
+
     def __init__(self):
         super().__init__()
         self.setWindowTitle('Scenario Image Automation')
@@ -268,11 +287,12 @@ class MainWindow(QtWidgets.QMainWindow):
         self.btn_rename_scenario.clicked.connect(self.rename_scenario)
         self.btn_rename_step = QtWidgets.QPushButton("Rename Step")
         self.btn_rename_step.clicked.connect(self.rename_step)
-        # Start/Stop
-        self.btn_start = QtWidgets.QPushButton('Start')
-        self.btn_start.clicked.connect(self.start_automation)
-        self.btn_stop = QtWidgets.QPushButton('Stop')
-        self.btn_stop.clicked.connect(self.stop_automation)
+        # Start/Stop Combined
+        self.btn_start_stop = QtWidgets.QPushButton('Start')
+        self.btn_start_stop.clicked.connect(self.toggle_automation)
+        # State label
+        self.state_label = QtWidgets.QLabel('State: Paused')
+        self.state_label.setStyleSheet('font-weight: bold; font-size: 16px; color: #0055aa;')
         # Layout
         layout = QtWidgets.QGridLayout()
         layout.addWidget(QtWidgets.QLabel('Scenario:'), 0, 0)
@@ -287,8 +307,8 @@ class MainWindow(QtWidgets.QMainWindow):
         layout.addWidget(self.btn_edit_step, 5, 2)
         layout.addWidget(self.btn_del_step, 5, 3)
         layout.addWidget(self.btn_rename_step, 5, 4)
-        layout.addWidget(self.btn_start, 6, 1)
-        layout.addWidget(self.btn_stop, 6, 2)
+        layout.addWidget(self.btn_start_stop, 6, 1)
+        layout.addWidget(self.state_label, 6, 2, 1, 3)
         central = QtWidgets.QWidget()
         central.setLayout(layout)
         self.setCentralWidget(central)
@@ -547,6 +567,10 @@ class StepDialog(QtWidgets.QDialog):
         self.btn_add_act.clicked.connect(self.add_action)
         self.btn_del_act = QtWidgets.QPushButton('Delete Action')
         self.btn_del_act.clicked.connect(self.delete_action)
+        self.btn_move_up_act = QtWidgets.QPushButton('Move Up')
+        self.btn_move_up_act.clicked.connect(self.move_action_up)
+        self.btn_move_down_act = QtWidgets.QPushButton('Move Down')
+        self.btn_move_down_act.clicked.connect(self.move_action_down)
         # Layout
         layout = QtWidgets.QGridLayout()
         layout.addWidget(QtWidgets.QLabel('Step Name:'), 0, 0)
@@ -572,6 +596,8 @@ class StepDialog(QtWidgets.QDialog):
         action_buttons = QtWidgets.QHBoxLayout()
         action_buttons.addWidget(self.btn_add_act)
         action_buttons.addWidget(self.btn_del_act)
+        action_buttons.addWidget(self.btn_move_up_act)
+        action_buttons.addWidget(self.btn_move_down_act)
         layout.addLayout(action_buttons, 5, 1, 1, 2)
 
         btns = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.StandardButton.Ok | QtWidgets.QDialogButtonBox.StandardButton.Cancel)
@@ -579,6 +605,22 @@ class StepDialog(QtWidgets.QDialog):
         btns.rejected.connect(self.reject)
         layout.addWidget(btns, 6, 1, 1, 2)
         self.setLayout(layout)
+
+    def move_action_up(self):
+        idx = self.act_list.currentRow()
+        if idx > 0:
+            self.actions[idx-1], self.actions[idx] = self.actions[idx], self.actions[idx-1]
+            item = self.act_list.takeItem(idx)
+            self.act_list.insertItem(idx-1, item)
+            self.act_list.setCurrentRow(idx-1)
+
+    def move_action_down(self):
+        idx = self.act_list.currentRow()
+        if idx < len(self.actions) - 1 and idx >= 0:
+            self.actions[idx+1], self.actions[idx] = self.actions[idx], self.actions[idx+1]
+            item = self.act_list.takeItem(idx)
+            self.act_list.insertItem(idx+1, item)
+            self.act_list.setCurrentRow(idx+1)
 
     class NameImageDialog(QtWidgets.QDialog):
         def __init__(self, pixmap, parent=None):
