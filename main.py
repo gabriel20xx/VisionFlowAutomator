@@ -147,7 +147,7 @@ class MainWindow(QtWidgets.QMainWindow):
                             if w.title == selected_window:
                                 win = w
                                 break
-                        if win is not None and win.isVisible:
+                        if win is not None and win.width > 0 and win.height > 0:
                             x, y, w_, h_ = win.left, win.top, win.width, win.height
                             screen = pyautogui.screenshot(region=(x, y, w_, h_))
                             offset_x, offset_y = x, y
