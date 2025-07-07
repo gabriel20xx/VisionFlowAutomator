@@ -389,8 +389,18 @@ class MainWindow(QtWidgets.QMainWindow):
         self.window_combo = QtWidgets.QComboBox()
         self.window_combo.setMinimumWidth(90)
         scenario_group_layout.addWidget(QtWidgets.QLabel('Target Window:'))
-        scenario_group_layout.addWidget(self.window_combo)
+        # --- Window selection group ---
+        window_group_box = QtWidgets.QGroupBox('Target Window')
+        window_group_box.setSizePolicy(QtWidgets.QSizePolicy.Policy.Preferred, QtWidgets.QSizePolicy.Policy.Fixed)
+        window_group_layout = QtWidgets.QHBoxLayout()
+        self.window_combo.setMinimumWidth(90)
         self.window_combo.currentIndexChanged.connect(self._log_combo_window)
+        self.btn_refresh_windows = QtWidgets.QPushButton('Refresh')
+        self.btn_refresh_windows.setToolTip('Refresh open windows list')
+        self.btn_refresh_windows.clicked.connect(self._log_btn_refresh_windows)
+        window_group_layout.addWidget(self.window_combo)
+        window_group_layout.addWidget(self.btn_refresh_windows)
+        window_group_box.setLayout(window_group_layout)
         self.refresh_window_list()
         # Scenario actions
         self.btn_new = QtWidgets.QPushButton('New')
@@ -461,10 +471,11 @@ class MainWindow(QtWidgets.QMainWindow):
         layout.setVerticalSpacing(4)
         layout.setContentsMargins(8, 8, 8, 8)
 
-        # Scenario and Steps groups in layout
+        # Scenario, Window, and Steps groups in layout
         layout.addWidget(scenario_group_box, 0, 0, 1, 5)
         layout.setRowStretch(0, 0)  # Scenario group should not stretch vertically
-        layout.addWidget(steps_group_box, 1, 0, 3, 5)
+        layout.addWidget(window_group_box, 1, 0, 1, 5)
+        layout.addWidget(steps_group_box, 2, 0, 3, 5)
 
         # Start/State row in a group
         start_state_group = QtWidgets.QGroupBox()
@@ -478,6 +489,10 @@ class MainWindow(QtWidgets.QMainWindow):
         start_state_group.setLayout(start_state_layout)
         layout.addWidget(start_state_group, 5, 0, 1, 5)
         layout.setRowStretch(5, 0)  # Prevent vertical stretch
+
+    def _log_btn_refresh_windows(self):
+        logger.info("UI: Refresh Windows button pressed")
+        self.refresh_window_list()
 
         # Set central widget
         central = QtWidgets.QWidget()
