@@ -254,7 +254,11 @@ class MainWindow(QtWidgets.QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle('Scenario Image Automation')
-        self.setGeometry(100, 100, 1000, 700)
+        # Make window smaller and more compact
+        min_width = 480
+        min_height = 320
+        self.setMinimumSize(min_width, min_height)
+        self.setGeometry(100, 100, min_width, 400)
         self.running = False
         self.hotkey = '<ctrl>+<alt>+s'
         self.listener = None
@@ -265,50 +269,106 @@ class MainWindow(QtWidgets.QMainWindow):
         self.load_scenarios()
 
     def init_ui(self):
-        # Scenario selection
+        # Set compact font and style
+        font = QtGui.QFont()
+        font.setPointSize(9)
+        self.setFont(font)
+        style = """
+            QPushButton, QComboBox, QListWidget, QLabel {
+                font-size: 9pt;
+                min-height: 20px;
+                padding: 2px 6px;
+            }
+            QComboBox { min-width: 90px; }
+            QPushButton { min-width: 70px; }
+            QListWidget { min-width: 200px; min-height: 120px; }
+        """
+        self.setStyleSheet(style)
+
+        # Scenario group (QGroupBox with title 'Scenario')
+        scenario_group_box = QtWidgets.QGroupBox('Scenario')
+        scenario_group_layout = QtWidgets.QVBoxLayout()
         self.combo = QtWidgets.QComboBox()
+        self.combo.setMinimumWidth(90)
         self.combo.currentIndexChanged.connect(self.select_scenario)
-        self.btn_new = QtWidgets.QPushButton('New Scenario')
+        scenario_group_layout.addWidget(self.combo)
+        # Scenario actions
+        self.btn_new = QtWidgets.QPushButton('New')
+        self.btn_new.setToolTip('Create new scenario')
         self.btn_new.clicked.connect(self.create_scenario)
         self.btn_import = QtWidgets.QPushButton('Import')
+        self.btn_import.setToolTip('Import scenario')
         self.btn_import.clicked.connect(self.import_scenario)
         self.btn_export = QtWidgets.QPushButton('Export')
+        self.btn_export.setToolTip('Export scenario')
         self.btn_export.clicked.connect(self.export_scenario)
-        # Steps list
-        self.steps_list = QtWidgets.QListWidget()
-        self.steps_list.currentRowChanged.connect(self.select_step)
-        self.btn_add_step = QtWidgets.QPushButton('Add Step')
-        self.btn_add_step.clicked.connect(self.add_step)
-        self.btn_edit_step = QtWidgets.QPushButton('Edit Step')
-        self.btn_edit_step.clicked.connect(self.edit_step)
-        self.btn_del_step = QtWidgets.QPushButton('Delete Step')
-        self.btn_del_step.clicked.connect(self.delete_step)
-        self.btn_rename_scenario = QtWidgets.QPushButton("Rename Scenario")
+        self.btn_rename_scenario = QtWidgets.QPushButton("Rename")
+        self.btn_rename_scenario.setToolTip('Rename scenario')
         self.btn_rename_scenario.clicked.connect(self.rename_scenario)
-        self.btn_rename_step = QtWidgets.QPushButton("Rename Step")
+        scenario_btn_group_layout = QtWidgets.QHBoxLayout()
+        scenario_btn_group_layout.setSpacing(4)
+        scenario_btn_group_layout.setContentsMargins(4, 4, 4, 4)
+        scenario_btn_group_layout.addWidget(self.btn_new)
+        scenario_btn_group_layout.addWidget(self.btn_import)
+        scenario_btn_group_layout.addWidget(self.btn_export)
+        scenario_btn_group_layout.addWidget(self.btn_rename_scenario)
+        scenario_group_layout.addLayout(scenario_btn_group_layout)
+        scenario_group_box.setLayout(scenario_group_layout)
+
+        # Steps group (QGroupBox with title 'Steps')
+        steps_group_box = QtWidgets.QGroupBox('Steps')
+        steps_group_layout = QtWidgets.QVBoxLayout()
+        self.steps_list = QtWidgets.QListWidget()
+        self.steps_list.setMinimumHeight(120)
+        self.steps_list.currentRowChanged.connect(self.select_step)
+        steps_group_layout.addWidget(self.steps_list)
+        # Step actions
+        self.btn_add_step = QtWidgets.QPushButton('Add')
+        self.btn_add_step.setToolTip('Add step')
+        self.btn_add_step.clicked.connect(self.add_step)
+        self.btn_edit_step = QtWidgets.QPushButton('Edit')
+        self.btn_edit_step.setToolTip('Edit step')
+        self.btn_edit_step.clicked.connect(self.edit_step)
+        self.btn_del_step = QtWidgets.QPushButton('Delete')
+        self.btn_del_step.setToolTip('Delete step')
+        self.btn_del_step.clicked.connect(self.delete_step)
+        self.btn_rename_step = QtWidgets.QPushButton("Rename")
+        self.btn_rename_step.setToolTip('Rename step')
         self.btn_rename_step.clicked.connect(self.rename_step)
+        step_btn_group_layout = QtWidgets.QHBoxLayout()
+        step_btn_group_layout.setSpacing(4)
+        step_btn_group_layout.setContentsMargins(4, 4, 4, 4)
+        step_btn_group_layout.addWidget(self.btn_add_step)
+        step_btn_group_layout.addWidget(self.btn_edit_step)
+        step_btn_group_layout.addWidget(self.btn_del_step)
+        step_btn_group_layout.addWidget(self.btn_rename_step)
+        steps_group_layout.addLayout(step_btn_group_layout)
+        steps_group_box.setLayout(steps_group_layout)
+
         # Start/Stop Combined
         self.btn_start_stop = QtWidgets.QPushButton('Start')
+        self.btn_start_stop.setMinimumWidth(80)
         self.btn_start_stop.clicked.connect(self.toggle_automation)
+
         # State label
         self.state_label = QtWidgets.QLabel('State: Paused')
-        self.state_label.setStyleSheet('font-weight: bold; font-size: 16px; color: #0055aa;')
-        # Layout
+        self.state_label.setStyleSheet('font-weight: bold; font-size: 11pt; color: #0055aa;')
+
+        # Main layout
         layout = QtWidgets.QGridLayout()
-        layout.addWidget(QtWidgets.QLabel('Scenario:'), 0, 0)
-        layout.addWidget(self.combo, 0, 1)
-        layout.addWidget(self.btn_new, 0, 2)
-        layout.addWidget(self.btn_import, 0, 3)
-        layout.addWidget(self.btn_export, 0, 4)
-        layout.addWidget(self.btn_rename_scenario, 0, 5)
-        layout.addWidget(QtWidgets.QLabel('Steps:'), 1, 0)
-        layout.addWidget(self.steps_list, 1, 1, 4, 4)
-        layout.addWidget(self.btn_add_step, 5, 1)
-        layout.addWidget(self.btn_edit_step, 5, 2)
-        layout.addWidget(self.btn_del_step, 5, 3)
-        layout.addWidget(self.btn_rename_step, 5, 4)
-        layout.addWidget(self.btn_start_stop, 6, 1)
-        layout.addWidget(self.state_label, 6, 2, 1, 3)
+        layout.setHorizontalSpacing(6)
+        layout.setVerticalSpacing(4)
+        layout.setContentsMargins(8, 8, 8, 8)
+
+        # Scenario and Steps groups in layout
+        layout.addWidget(scenario_group_box, 0, 0, 1, 5)
+        layout.addWidget(steps_group_box, 1, 0, 3, 5)
+
+        # Start/State row
+        layout.addWidget(self.btn_start_stop, 5, 1)
+        layout.addWidget(self.state_label, 5, 2, 1, 2)
+
+        # Set central widget
         central = QtWidgets.QWidget()
         central.setLayout(layout)
         self.setCentralWidget(central)
