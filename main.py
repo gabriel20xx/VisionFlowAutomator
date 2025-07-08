@@ -389,7 +389,6 @@ class MainWindow(QtWidgets.QMainWindow):
         # Window selection dropdown
         self.window_combo = QtWidgets.QComboBox()
         self.window_combo.setMinimumWidth(90)
-        scenario_group_layout.addWidget(QtWidgets.QLabel('Target Window:'))
         # --- Window selection group ---
         window_group_box = QtWidgets.QGroupBox('Target Window')
         window_group_box.setSizePolicy(QtWidgets.QSizePolicy.Policy.Preferred, QtWidgets.QSizePolicy.Policy.Fixed)
