@@ -679,13 +679,26 @@ class MainWindow(QtWidgets.QMainWindow):
         self.refresh_window_list()
 
         if not scenarios:
-            name, ok = QtWidgets.QInputDialog.getText(self, 'New Scenario', 'No scenarios found. Enter a name for your first scenario:')
-            if ok and name:
-                logger.info(f'Creating new scenario: {name}')
-                s = Scenario(name)
-                s.save()
-                self.combo.addItem(name)
-                self.combo.setCurrentText(name)
+            choice_dialog = QtWidgets.QMessageBox(self)
+            choice_dialog.setWindowTitle('No Scenarios Found')
+            choice_dialog.setText('No scenarios found. Would you like to create a new scenario or import one?')
+            create_btn = choice_dialog.addButton('Create New', QtWidgets.QMessageBox.ButtonRole.AcceptRole)
+            import_btn = choice_dialog.addButton('Import', QtWidgets.QMessageBox.ButtonRole.ActionRole)
+            choice_dialog.setDefaultButton(create_btn)
+            choice_dialog.exec()
+            clicked = choice_dialog.clickedButton()
+            if clicked == create_btn:
+                name, ok = QtWidgets.QInputDialog.getText(self, 'New Scenario', 'Enter a name for your first scenario:')
+                if ok and name:
+                    logger.info(f'Creating new scenario: {name}')
+                    s = Scenario(name)
+                    s.save()
+                    self.combo.addItem(name)
+                    self.combo.setCurrentText(name)
+                else:
+                    self.refresh_lists()
+            elif clicked == import_btn:
+                self.import_scenario()
             else:
                 self.refresh_lists()
         else:
