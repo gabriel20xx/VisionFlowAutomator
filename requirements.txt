@@ -1,0 +1,7 @@
+PyQt6
+opencv-python
+pyautogui
+pynput
+pygetwindow
+numpy
+Pillow

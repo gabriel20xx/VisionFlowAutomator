@@ -34,7 +34,6 @@ VisionFlow Automator is a powerful desktop automation tool that lets you create,
 - pygetwindow
 - numpy
 - Pillow
-- mss
 
 Install dependencies with:
 ```bash
