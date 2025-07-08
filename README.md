@@ -26,7 +26,7 @@ VisionFlow Automator is a powerful desktop automation tool that lets you create,
 
 ## Requirements
 
-- Python 3.8+
+- Python 3.11+
 - PyQt6
 - opencv-python
 - pyautogui
