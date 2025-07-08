@@ -730,12 +730,18 @@ class MainWindow(QtWidgets.QMainWindow):
         new_name, ok = QtWidgets.QInputDialog.getText(self, "Rename Scenario", "New name:", text=old_name)
         
         if ok and new_name and new_name != old_name:
-            # Rename the scenario file
+            # Rename the scenario directory
             try:
-                os.rename(os.path.join(CONFIG_DIR, f"{old_name}.json"), os.path.join(CONFIG_DIR, f"{new_name}.json"))
+                old_dir = os.path.join(CONFIG_DIR, old_name)
+                new_dir = os.path.join(CONFIG_DIR, new_name)
+                if not os.path.exists(old_dir):
+                    raise FileNotFoundError(f"Scenario directory '{old_dir}' does not exist.")
+                if os.path.exists(new_dir):
+                    raise FileExistsError(f"A scenario named '{new_name}' already exists.")
+                os.rename(old_dir, new_dir)
             except OSError as e:
-                logger.error(f"Error renaming scenario file: {e}")
-                QtWidgets.QMessageBox.critical(self, "Error", f"Could not rename scenario file.\n{e}")
+                logger.error(f"Error renaming scenario directory: {e}")
+                QtWidgets.QMessageBox.critical(self, "Error", f"Could not rename scenario directory.\n{e}")
                 return
 
             # Update the scenario object and save it
