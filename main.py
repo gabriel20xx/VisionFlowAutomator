@@ -107,7 +107,8 @@ class Scenario:
 def take_screenshot_with_tkinter():
     """
     Use Tkinter to let the user select a region of the screen for a screenshot.
-    Returns a dict with x, y, width, height.
+    The screen is not frozen.
+    Returns a dict with x, y, width, height, or None.
     """
     root = tk.Tk()
     root.attributes("-alpha", 0.3)
@@ -121,11 +122,7 @@ def take_screenshot_with_tkinter():
     start_x = None
     start_y = None
     
-    im = ImageGrab.grab()
-    img = ImageTk.PhotoImage(im)
-    canvas.create_image(0,0,image=img,anchor="nw")
-
-    selection_rect = {"x": 0, "y": 0, "width": 0, "height": 0}
+    selection_rect = None
 
     def on_button_press(event):
         nonlocal start_x, start_y, rect
@@ -142,16 +139,28 @@ def take_screenshot_with_tkinter():
         nonlocal selection_rect
         end_x, end_y = (event.x, event.y)
         
-        selection_rect["x"] = min(start_x, end_x)
-        selection_rect["y"] = min(start_y, end_y)
-        selection_rect["width"] = abs(start_x - end_x)
-        selection_rect["height"] = abs(start_y - end_y)
+        x1 = min(start_x, end_x)
+        y1 = min(start_y, end_y)
+        x2 = max(start_x, end_x)
+        y2 = max(start_y, end_y)
+
+        width = x2 - x1
+        height = y2 - y1
+
+        if width > 0 and height > 0:
+            selection_rect = {"x": x1, "y": y1, "width": width, "height": height}
         
         root.quit()
 
     canvas.bind("<ButtonPress-1>", on_button_press)
     canvas.bind("<B1-Motion>", on_mouse_drag)
     canvas.bind("<ButtonRelease-1>", on_button_release)
+
+    def on_escape(event):
+        nonlocal selection_rect
+        selection_rect = None
+        root.quit()
+    root.bind("<Escape>", on_escape)
 
     root.mainloop()
     root.destroy()
@@ -593,20 +602,18 @@ class MainWindow(QtWidgets.QMainWindow):
         """
         Open the dialog to add a new step to the current scenario.
         """
-        self.setWindowState(QtCore.Qt.WindowState.WindowMinimized)
-        try:
-            dlg = StepDialog(self)
-            dlg.setWindowFlags(dlg.windowFlags() | QtCore.Qt.WindowType.WindowStaysOnTopHint)
-            # Only process if the dialog was accepted
-            if dlg.exec():
-                step = dlg.get_step()
-                self.current_scenario.steps.append(step)
-                self.current_scenario.save()
-                self.refresh_lists()
-                logger.info(f'Added step: {step}')
-        finally:
-            self.setWindowState(QtCore.Qt.WindowState.WindowNoState)
-            self.activateWindow()
+        self._step_dialog = StepDialog(self)
+        self._step_dialog.accepted.connect(self._on_add_step_accepted)
+        self._step_dialog.show()
+
+    def _on_add_step_accepted(self):
+        step = self._step_dialog.get_step()
+        self.current_scenario.steps.append(step)
+        self.current_scenario.save()
+        self.refresh_lists()
+        logger.info(f'Added step: {step}')
+        self._step_dialog.deleteLater()
+        self._step_dialog = None
 
     def edit_step(self):
         """
@@ -616,19 +623,17 @@ class MainWindow(QtWidgets.QMainWindow):
         if idx is None or idx < 0 or idx >= len(self.current_scenario.steps):
             return
         step = self.current_scenario.steps[idx]
-        self.setWindowState(QtCore.Qt.WindowState.WindowMinimized)
-        try:
-            dlg = StepDialog(self, step)
-            dlg.setWindowFlags(dlg.windowFlags() | QtCore.Qt.WindowType.WindowStaysOnTopHint)
-            # Only process if the dialog was accepted
-            if dlg.exec():
-                self.current_scenario.steps[idx] = dlg.get_step()
-                self.current_scenario.save()
-                self.refresh_lists()
-                logger.info(f'Edited step at idx {idx}')
-        finally:
-            self.setWindowState(QtCore.Qt.WindowState.WindowNoState)
-            self.activateWindow()
+        self._step_dialog = StepDialog(self, step)
+        self._step_dialog.accepted.connect(lambda: self._on_edit_step_accepted(idx))
+        self._step_dialog.show()
+
+    def _on_edit_step_accepted(self, idx):
+        self.current_scenario.steps[idx] = self._step_dialog.get_step()
+        self.current_scenario.save()
+        self.refresh_lists()
+        logger.info(f'Edited step at idx {idx}')
+        self._step_dialog.deleteLater()
+        self._step_dialog = None
 
     def delete_step(self):
         """
@@ -1089,7 +1094,6 @@ class StepDialog(QtWidgets.QDialog):
             """
             return self.name_edit.text()
 
-
     def add_image_to_step(self):
         """
         Add a new image to the step by taking a screenshot and letting the user select a region.
@@ -1100,72 +1104,56 @@ class StepDialog(QtWidgets.QDialog):
             QtWidgets.QMessageBox.warning(self, "Step Name Required", "Please enter a name for the step before adding an image.")
             return
 
-        logger.debug("StepDialog.add_image_to_step: Minimizing all windows for screenshot.")
-        all_windows = QtWidgets.QApplication.topLevelWidgets()
-        for w in all_windows:
-            w.setWindowState(QtCore.Qt.WindowState.WindowMinimized)
+        main_window.hide()
+        self.hide()
+        time.sleep(0.3)
 
-        QtWidgets.QApplication.processEvents()
-        time.sleep(0.5)
-
+        cropped_pil_image = None
+        rect_coords = None
         try:
-            screen = QtWidgets.QApplication.primaryScreen()
-            if not screen:
-                logger.error("StepDialog.add_image_to_step: Could not get primary screen.")
-                raise Exception("Could not get primary screen.")
-            # Use mss for more reliable screenshot
-            import mss.tools
-            with mss.mss() as sct:
-                monitor = sct.monitors[1]
-                sct_img = sct.grab(monitor)
-                img = np.array(sct_img)
-                img = cv2.cvtColor(img, cv2.COLOR_BGRA2RGB)
-                height, width, channel = img.shape
-                bytes_per_line = 3 * width
-                qimg = QtGui.QImage(img.data, width, height, bytes_per_line, QtGui.QImage.Format.Format_RGB888)
-                full_screenshot_pixmap = QtGui.QPixmap.fromImage(qimg)
-            logger.debug("StepDialog.add_image_to_step: Screenshot taken with mss.")
+            rect_coords = take_screenshot_with_tkinter()
+            if rect_coords:
+                cropped_pil_image = ImageGrab.grab(bbox=(
+                    rect_coords['x'], 
+                    rect_coords['y'], 
+                    rect_coords['x'] + rect_coords['width'], 
+                    rect_coords['y'] + rect_coords['height']
+                ))
+            logger.debug("StepDialog.add_image_to_step: Screenshot selection finished.")
         except Exception as e:
             logger.error(f"StepDialog.add_image_to_step: Screenshot failed: {e}")
             QtWidgets.QMessageBox.critical(self, 'Error', f'Failed to take screenshot: {e}')
-            for w in all_windows:
-                w.setWindowState(QtCore.Qt.WindowState.WindowNoState)
-                w.showNormal()
-                w.activateWindow()
-            return
         finally:
-            for w in all_windows:
-                w.setWindowState(QtCore.Qt.WindowState.WindowNoState)
-                w.showNormal()
-                w.activateWindow()
+            self.show()
+            main_window.show()
 
-        rect_coords = take_screenshot_with_tkinter()
-        
-        if rect_coords and rect_coords["width"] > 0 and rect_coords["height"] > 0:
-            
-            # Now, use the coordinates to crop the original full screenshot
-            rect = QtCore.QRect(rect_coords["x"], rect_coords["y"], rect_coords["width"], rect_coords["height"])
-            cropped_pixmap = full_screenshot_pixmap.copy(rect)
+        if cropped_pil_image and rect_coords:
+            img_np = np.array(cropped_pil_image.convert('RGB'))
+            height, width, channel = img_np.shape
+            bytes_per_line = 3 * width
+            qimage = QtGui.QImage(img_np.data, width, height, bytes_per_line, QtGui.QImage.Format.Format_RGB888)
+            cropped_pixmap = QtGui.QPixmap.fromImage(qimage)
 
             name_dialog = self.NameImageDialog(cropped_pixmap, self)
             if name_dialog.exec():
                 name = name_dialog.get_name()
-                scenario_dir = main_window.current_scenario.get_scenario_dir()
-                step_images_dir = os.path.join(scenario_dir, "steps", step_name)
-                if not os.path.exists(step_images_dir):
-                    os.makedirs(step_images_dir)
+                if name:
+                    scenario_dir = main_window.current_scenario.get_scenario_dir()
+                    step_images_dir = os.path.join(scenario_dir, "steps", step_name)
+                    if not os.path.exists(step_images_dir):
+                        os.makedirs(step_images_dir)
 
-                safe_name = "".join(c for c in name if c.isalnum() or c in (' ', '_')).rstrip()
-                path = os.path.join(step_images_dir, f'{safe_name}.png')
+                    safe_name = "".join(c for c in name if c.isalnum() or c in (' ', '_')).rstrip()
+                    path = os.path.join(step_images_dir, f'{safe_name}.png')
 
-                if cropped_pixmap.save(path, "PNG"):
-                    logger.info(f"Screenshot saved to {path}")
-                    img_obj = {'path': path, 'region': [rect.x(), rect.y(), rect.width(), rect.height()], 'name': name, 'sensitivity': 0.9}
-                    self.images.append(img_obj)
-                    self.img_list.addItem(name)
-                else:
-                    logger.error(f"Failed to save screenshot to {path}")
-                    QtWidgets.QMessageBox.critical(self, 'Error', 'Failed to save the screenshot file.')
+                    if cropped_pixmap.save(path, "PNG"):
+                        logger.info(f"Screenshot saved to {path}")
+                        img_obj = {'path': path, 'region': [rect_coords['x'], rect_coords['y'], rect_coords['width'], rect_coords['height']], 'name': name, 'sensitivity': 0.9}
+                        self.images.append(img_obj)
+                        self.img_list.addItem(name)
+                    else:
+                        logger.error(f"Failed to save screenshot to {path}")
+                        QtWidgets.QMessageBox.critical(self, 'Error', 'Failed to save the screenshot file.')
 
     def update_image_preview(self, current, previous):
         """
@@ -1233,35 +1221,43 @@ class StepDialog(QtWidgets.QDialog):
         if idx < 0:
             return
 
-        all_windows = QtWidgets.QApplication.topLevelWidgets()
-        for w in all_windows:
-            w.setWindowState(QtCore.Qt.WindowState.WindowMinimized)
+        main_window = self.parent()
+        main_window.hide()
+        self.hide()
+        time.sleep(0.3)
 
-        time.sleep(0.5)
-
+        cropped_pil_image = None
+        rect_coords = None
         try:
-            screen = QtWidgets.QApplication.primaryScreen()
-            if not screen:
-                raise Exception("Could not get primary screen.")
-            full_screenshot_pixmap = screen.grabWindow(0)
+            rect_coords = take_screenshot_with_tkinter()
+            if rect_coords:
+                cropped_pil_image = ImageGrab.grab(bbox=(
+                    rect_coords['x'], 
+                    rect_coords['y'], 
+                    rect_coords['x'] + rect_coords['width'], 
+                    rect_coords['y'] + rect_coords['height']
+                ))
+            logger.debug("StepDialog.retake_screenshot: Screenshot selection finished.")
+        except Exception as e:
+            logger.error(f"StepDialog.retake_screenshot: Screenshot failed: {e}")
+            QtWidgets.QMessageBox.critical(self, 'Error', f'Failed to take screenshot: {e}')
         finally:
-            for w in all_windows:
-                w.setWindowState(QtCore.Qt.WindowState.WindowNoState)
-                w.showNormal()
-                w.activateWindow()
+            self.show()
+            main_window.show()
 
-        rect_coords = take_screenshot_with_tkinter()
-
-        if rect_coords and rect_coords["width"] > 0 and rect_coords["height"] > 0:
-            rect = QtCore.QRect(rect_coords["x"], rect_coords["y"], rect_coords["width"], rect_coords["height"])
-            cropped_pixmap = full_screenshot_pixmap.copy(rect)
+        if cropped_pil_image and rect_coords:
+            img_np = np.array(cropped_pil_image.convert('RGB'))
+            height, width, channel = img_np.shape
+            bytes_per_line = 3 * width
+            qimage = QtGui.QImage(img_np.data, width, height, bytes_per_line, QtGui.QImage.Format.Format_RGB888)
+            cropped_pixmap = QtGui.QPixmap.fromImage(qimage)
 
             img_obj = self.images[idx]
             path = img_obj['path']
 
             if cropped_pixmap.save(path, "PNG"):
                 logger.info(f"Screenshot retaken and saved to {path}")
-                img_obj['region'] = [rect.x(), rect.y(), rect.width(), rect.height()]
+                img_obj['region'] = [rect_coords['x'], rect_coords['y'], rect_coords['width'], rect_coords['height']]
                 self.update_image_preview(self.img_list.currentItem(), None)
             else:
                 logger.error(f"Failed to save retaken screenshot to {path}")
