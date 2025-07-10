@@ -351,8 +351,8 @@ class MainWindow(QtWidgets.QMainWindow):
         super().__init__()
         self.setWindowTitle('Scenario Image Automation')
         # Make window smaller and more compact
-        min_width = 480
-        min_height = 480
+        min_width = 640
+        min_height = 640
         self.setMinimumSize(min_width, min_height)
         self.setGeometry(100, 100, min_width, min_height)
         self.running = False
@@ -424,6 +424,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.btn_rename_scenario = QtWidgets.QPushButton("Rename")
         self.btn_rename_scenario.setToolTip('Rename scenario')
         self.btn_rename_scenario.clicked.connect(self._log_btn_rename_scenario)
+        self.btn_delete_scenario = QtWidgets.QPushButton("Delete")
+        self.btn_delete_scenario.setToolTip('Delete current scenario')
+        self.btn_delete_scenario.clicked.connect(self._log_btn_delete_scenario)
         scenario_btn_group_layout = QtWidgets.QHBoxLayout()
         scenario_btn_group_layout.setSpacing(4)
         scenario_btn_group_layout.setContentsMargins(4, 4, 4, 4)
@@ -431,11 +434,12 @@ class MainWindow(QtWidgets.QMainWindow):
         scenario_btn_group_layout.addWidget(self.btn_import)
         scenario_btn_group_layout.addWidget(self.btn_export)
         scenario_btn_group_layout.addWidget(self.btn_rename_scenario)
+        scenario_btn_group_layout.addWidget(self.btn_delete_scenario)
         scenario_group_layout.addLayout(scenario_btn_group_layout)
         scenario_group_box.setLayout(scenario_group_layout)
 
         # Steps group (QGroupBox with title 'Steps')
-        steps_group_box = QtWidgets.QGroupBox('Steps')
+        steps_group_box = QtWidgets.QGroupBox('Steps (Up = Higher Priority, Down = Lower Priority)')
         steps_group_layout = QtWidgets.QVBoxLayout()
         self.steps_list = QtWidgets.QListWidget()
         self.steps_list.setMinimumHeight(120)
@@ -454,6 +458,12 @@ class MainWindow(QtWidgets.QMainWindow):
         self.btn_rename_step = QtWidgets.QPushButton("Rename")
         self.btn_rename_step.setToolTip('Rename step')
         self.btn_rename_step.clicked.connect(self._log_btn_rename_step)
+        self.btn_move_up_step = QtWidgets.QPushButton('Move Up')
+        self.btn_move_up_step.setToolTip('Move step up (higher priority)')
+        self.btn_move_up_step.clicked.connect(self._log_btn_move_up_step)
+        self.btn_move_down_step = QtWidgets.QPushButton('Move Down')
+        self.btn_move_down_step.setToolTip('Move step down (lower priority)')
+        self.btn_move_down_step.clicked.connect(self._log_btn_move_down_step)
         step_btn_group_layout = QtWidgets.QHBoxLayout()
         step_btn_group_layout.setSpacing(4)
         step_btn_group_layout.setContentsMargins(4, 4, 4, 4)
@@ -461,6 +471,8 @@ class MainWindow(QtWidgets.QMainWindow):
         step_btn_group_layout.addWidget(self.btn_edit_step)
         step_btn_group_layout.addWidget(self.btn_del_step)
         step_btn_group_layout.addWidget(self.btn_rename_step)
+        step_btn_group_layout.addWidget(self.btn_move_up_step)
+        step_btn_group_layout.addWidget(self.btn_move_down_step)
         steps_group_layout.addLayout(step_btn_group_layout)
         steps_group_box.setLayout(steps_group_layout)
 
@@ -550,6 +562,38 @@ class MainWindow(QtWidgets.QMainWindow):
         logger.info("UI: Rename Scenario button pressed")
         self.rename_scenario()
 
+    def _log_btn_delete_scenario(self):
+        """
+        Log Delete Scenario button press and call delete_scenario.
+        """
+        logger.info("UI: Delete Scenario button pressed")
+        self.delete_scenario()
+
+    def delete_scenario(self):
+        """
+        Delete the current scenario after confirmation.
+        """
+        if not self.current_scenario:
+            return
+        name = self.current_scenario.name
+        reply = QtWidgets.QMessageBox.question(
+            self,
+            "Delete Scenario",
+            f"Are you sure you want to delete the scenario '{name}'? This cannot be undone.",
+            QtWidgets.QMessageBox.StandardButton.Yes | QtWidgets.QMessageBox.StandardButton.No
+        )
+        if reply == QtWidgets.QMessageBox.StandardButton.Yes:
+            try:
+                scenario_dir = self.current_scenario.get_scenario_dir()
+                if os.path.exists(scenario_dir):
+                    shutil.rmtree(scenario_dir)
+                logger.info(f"Deleted scenario: {name}")
+                self.current_scenario = None
+                self.load_scenarios()
+            except Exception as e:
+                logger.error(f"Failed to delete scenario '{name}': {e}")
+                QtWidgets.QMessageBox.critical(self, "Delete Error", f"Failed to delete scenario.\n{e}")
+
     def _log_steps_list(self, idx):
         """
         Log steps list row change and call select_step.
@@ -591,6 +635,60 @@ class MainWindow(QtWidgets.QMainWindow):
         """
         logger.info("UI: Start/Stop button pressed")
         self.toggle_automation()
+
+    def _log_btn_move_up_step(self):
+        """
+        Log Move Up Step button press and call move_up_step.
+        """
+        logger.info("UI: Move Up Step button pressed")
+        self.move_up_step()
+
+    def _log_btn_move_down_step(self):
+        """
+        Log Move Down Step button press and call move_down_step.
+        """
+        logger.info("UI: Move Down Step button pressed")
+        self.move_down_step()
+
+    def move_up_step(self):
+        """
+        Move the selected step up in the steps list (higher priority).
+        """
+        idx = self.selected_step_idx
+        if (
+            self.current_scenario
+            and idx is not None
+            and idx > 0
+            and idx < len(self.current_scenario.steps)
+        ):
+            self.current_scenario.steps[idx - 1], self.current_scenario.steps[idx] = (
+                self.current_scenario.steps[idx],
+                self.current_scenario.steps[idx - 1],
+            )
+            self.current_scenario.save()
+            self.refresh_lists()
+            self.steps_list.setCurrentRow(idx - 1)
+            self.selected_step_idx = idx - 1
+
+    def move_down_step(self):
+        """
+        Move the selected step down in the steps list (lower priority).
+        """
+        idx = self.selected_step_idx
+        if (
+            self.current_scenario
+            and idx is not None
+            and idx >= 0
+            and idx < len(self.current_scenario.steps) - 1
+        ):
+            self.current_scenario.steps[idx + 1], self.current_scenario.steps[idx] = (
+                self.current_scenario.steps[idx],
+                self.current_scenario.steps[idx + 1],
+            )
+            self.current_scenario.save()
+            self.refresh_lists()
+            self.steps_list.setCurrentRow(idx + 1)
+            self.selected_step_idx = idx + 1
 
     def select_step(self, idx):
         """
@@ -874,7 +972,10 @@ class MainWindow(QtWidgets.QMainWindow):
         for step in self.current_scenario.steps:
             name = step.get('name', 'Unnamed Step')
             cond = step.get('condition', 'OR')
-            imgs = ','.join([img.get('name', 'img') for img in step.get('images', [])])
+            imgs = ','.join([
+                f"{img.get('name', 'img')} ({img.get('sensitivity', 0.9):.2f})"
+                for img in step.get('images', [])
+            ])
             acts = ','.join([a.get('type', 'action') for a in step.get('actions', [])])
             self.steps_list.addItem(f"{name} [{cond}] imgs: {imgs} actions: {acts}")
 
@@ -965,11 +1066,17 @@ class StepDialog(QtWidgets.QDialog):
         self.cond_combo.addItems(['OR', 'AND'])
         if step and 'condition' in step:
             self.cond_combo.setCurrentText(step['condition'])
-        # Images
+        # Images Group
+        images_group = QtWidgets.QGroupBox('Images')
+        images_group_layout = QtWidgets.QVBoxLayout()
+        images_row_layout = QtWidgets.QHBoxLayout()
+        img_list_layout = QtWidgets.QVBoxLayout()
         self.img_list = QtWidgets.QListWidget()
         self.img_list.currentItemChanged.connect(self.update_image_preview)
         for img in self.images:
             self.img_list.addItem(img.get('name', 'img'))
+        img_list_layout.addWidget(self.img_list)
+        img_list_layout.addWidget(QtWidgets.QLabel('Sensitivity:'))
         self.sensitivity_spin = QtWidgets.QDoubleSpinBox()
         self.sensitivity_spin.setRange(0.5, 1.0)
         self.sensitivity_spin.setSingleStep(0.01)
@@ -978,6 +1085,15 @@ class StepDialog(QtWidgets.QDialog):
         self.sensitivity_spin.setToolTip('Sensitivity for selected image (higher = stricter match)')
         self.img_list.currentRowChanged.connect(self.update_sensitivity_spin)
         self.sensitivity_spin.valueChanged.connect(self.save_sensitivity_for_image)
+        img_list_layout.addWidget(self.sensitivity_spin)
+        images_row_layout.addLayout(img_list_layout)
+        self.img_preview = QtWidgets.QLabel('Image Preview')
+        self.img_preview.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+        self.img_preview.setFixedSize(200, 200)
+        images_row_layout.addWidget(self.img_preview)
+        images_group_layout.addLayout(images_row_layout)
+        # Image buttons horizontal, spanning full width
+        img_btns_layout = QtWidgets.QHBoxLayout()
         self.btn_add_img = QtWidgets.QPushButton('Add Image')
         self.btn_add_img.clicked.connect(self.add_image_to_step)
         self.btn_del_img = QtWidgets.QPushButton('Delete Image')
@@ -986,13 +1102,21 @@ class StepDialog(QtWidgets.QDialog):
         self.btn_rename_img.clicked.connect(self.rename_image)
         self.btn_retake_img = QtWidgets.QPushButton("Retake Screenshot")
         self.btn_retake_img.clicked.connect(self.retake_screenshot)
-        self.img_preview = QtWidgets.QLabel('Image Preview')
-        self.img_preview.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
-        self.img_preview.setMinimumSize(200, 200)
-        # Actions
+        img_btns_layout.addWidget(self.btn_add_img)
+        img_btns_layout.addWidget(self.btn_del_img)
+        img_btns_layout.addWidget(self.btn_rename_img)
+        img_btns_layout.addWidget(self.btn_retake_img)
+        images_group_layout.addLayout(img_btns_layout)
+        images_group.setLayout(images_group_layout)
+
+        # Actions Group
+        actions_group = QtWidgets.QGroupBox('Actions')
+        actions_group_layout = QtWidgets.QVBoxLayout()
         self.act_list = QtWidgets.QListWidget()
         for act in self.actions:
             self.act_list.addItem(act.get('type', 'action'))
+        actions_group_layout.addWidget(self.act_list)
+        act_btns_layout = QtWidgets.QHBoxLayout()
         self.btn_add_act = QtWidgets.QPushButton('Add Action')
         self.btn_add_act.clicked.connect(self.add_action)
         self.btn_del_act = QtWidgets.QPushButton('Delete Action')
@@ -1001,41 +1125,25 @@ class StepDialog(QtWidgets.QDialog):
         self.btn_move_up_act.clicked.connect(self.move_action_up)
         self.btn_move_down_act = QtWidgets.QPushButton('Move Down')
         self.btn_move_down_act.clicked.connect(self.move_action_down)
-        # Layout
+        act_btns_layout.addWidget(self.btn_add_act)
+        act_btns_layout.addWidget(self.btn_del_act)
+        act_btns_layout.addWidget(self.btn_move_up_act)
+        act_btns_layout.addWidget(self.btn_move_down_act)
+        actions_group_layout.addLayout(act_btns_layout)
+        actions_group.setLayout(actions_group_layout)
+
+        # Main Layout
         layout = QtWidgets.QGridLayout()
         layout.addWidget(QtWidgets.QLabel('Step Name:'), 0, 0)
         layout.addWidget(self.name_edit, 0, 1, 1, 2)
         layout.addWidget(QtWidgets.QLabel('Condition:'), 1, 0)
         layout.addWidget(self.cond_combo, 1, 1, 1, 2)
-        
-        img_layout = QtWidgets.QHBoxLayout()
-        img_list_layout = QtWidgets.QVBoxLayout()
-        img_list_layout.addWidget(self.img_list)
-        img_list_layout.addWidget(QtWidgets.QLabel('Sensitivity:'))
-        img_list_layout.addWidget(self.sensitivity_spin)
-        img_list_layout.addWidget(self.btn_add_img)
-        img_list_layout.addWidget(self.btn_del_img)
-        img_list_layout.addWidget(self.btn_rename_img)
-        img_list_layout.addWidget(self.btn_retake_img)
-        img_layout.addLayout(img_list_layout)
-        img_layout.addWidget(self.img_preview)
-        
-        layout.addWidget(QtWidgets.QLabel('Images:'), 2, 0)
-        layout.addLayout(img_layout, 2, 1, 1, 2)
-
-        layout.addWidget(QtWidgets.QLabel('Actions:'), 3, 0)
-        layout.addWidget(self.act_list, 4, 1, 1, 2)
-        action_buttons = QtWidgets.QHBoxLayout()
-        action_buttons.addWidget(self.btn_add_act)
-        action_buttons.addWidget(self.btn_del_act)
-        action_buttons.addWidget(self.btn_move_up_act)
-        action_buttons.addWidget(self.btn_move_down_act)
-        layout.addLayout(action_buttons, 5, 1, 1, 2)
-
+        layout.addWidget(images_group, 2, 0, 1, 3)
+        layout.addWidget(actions_group, 3, 0, 1, 3)
         btns = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.StandardButton.Ok | QtWidgets.QDialogButtonBox.StandardButton.Cancel)
         btns.accepted.connect(self.accept)
         btns.rejected.connect(self.reject)
-        layout.addWidget(btns, 6, 1, 1, 2)
+        layout.addWidget(btns, 4, 1, 1, 2)
         self.setLayout(layout)
 
     def move_action_up(self):
@@ -1074,6 +1182,7 @@ class StepDialog(QtWidgets.QDialog):
             
             # Image Preview
             self.preview_label = QtWidgets.QLabel()
+            self.preview_label.setFixedSize(300, 300)
             self.preview_label.setPixmap(pixmap.scaled(300, 300, QtCore.Qt.AspectRatioMode.KeepAspectRatio, QtCore.Qt.TransformationMode.SmoothTransformation))
             layout.addWidget(self.preview_label, alignment=QtCore.Qt.AlignmentFlag.AlignCenter)
             
