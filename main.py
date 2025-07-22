@@ -11,6 +11,9 @@ import cv2
 import pygetwindow as gw
 import numpy as np
 import pyautogui
+
+# Disable the PyAutoGUI fail-safe feature.
+pyautogui.FAILSAFE = False
 from pynput import keyboard
 import tkinter as tk
 from PIL import ImageGrab, Image, ImageTk
