@@ -1,6 +1,6 @@
-# VisionFlow Automator
+# VisionFlowAutomator
 
-VisionFlow Automator is a powerful desktop automation tool that lets you create, edit, and run automation scenarios based on image recognition and GUI actions. With an intuitive graphical interface, you can visually define workflows that interact with any application or window on your system.
+VisionFlowAutomator is a powerful desktop automation tool that lets you create, edit, and run automation scenarios based on image recognition and GUI actions. With an intuitive graphical interface, you can visually define workflows that interact with any application or window on your system.
 
 ## Features
 
