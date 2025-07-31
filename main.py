@@ -2468,6 +2468,13 @@ class MainWindow(QtWidgets.QMainWindow):
         Apply dark mode to the window title bar.
         Works on Windows 10/11, macOS, and some Linux desktop environments.
         """
+        return self._apply_title_bar_theme_to_window(self, enable_dark)
+    
+    def _apply_title_bar_theme_to_window(self, window, enable_dark=True):
+        """
+        Apply title bar theme to a specific window (can be main window or dialog).
+        This is a helper method that can be used for any QWidget.
+        """
         try:
             import platform
             system = platform.system().lower()
@@ -2479,7 +2486,7 @@ class MainWindow(QtWidgets.QMainWindow):
                     from ctypes import wintypes
                     
                     # Get window handle
-                    hwnd = int(self.winId())
+                    hwnd = int(window.winId())
                     
                     # Define constants for Windows API
                     DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1 = 19
@@ -2504,11 +2511,11 @@ class MainWindow(QtWidgets.QMainWindow):
                         )
                         
                         if result == 0:  # S_OK
-                            logger.debug(f"Applied Windows {'dark' if enable_dark else 'light'} title bar ({'newer' if use_newer_api else 'legacy'} API)")
+                            logger.debug(f"Applied Windows {'dark' if enable_dark else 'light'} title bar to {window.__class__.__name__}")
                             
                             # Force immediate window redraw
-                            self.update()
-                            self.repaint()
+                            window.update()
+                            window.repaint()
                             
                             return True
                         else:
@@ -2527,9 +2534,9 @@ class MainWindow(QtWidgets.QMainWindow):
                                 ctypes.sizeof(ctypes.c_int)
                             )
                             if result == 0:
-                                logger.debug(f"Applied Windows {'dark' if enable_dark else 'light'} title bar (fallback API)")
-                                self.update()
-                                self.repaint()
+                                logger.debug(f"Applied Windows {'dark' if enable_dark else 'light'} title bar to {window.__class__.__name__} (fallback API)")
+                                window.update()
+                                window.repaint()
                                 
                                 return True
                         except Exception as fallback_e:
@@ -2590,33 +2597,24 @@ class MainWindow(QtWidgets.QMainWindow):
         # Apply title bar theming immediately
         self.apply_dark_title_bar(is_dark)
         
-        # Also apply to any open dialogs immediately
-        for dialog in QtWidgets.QApplication.allWidgets():
-            if isinstance(dialog, QtWidgets.QDialog) and dialog.isVisible():
+        # Apply to ALL widgets in the application (including dialogs that aren't currently visible)
+        for widget in QtWidgets.QApplication.allWidgets():
+            if isinstance(widget, (QtWidgets.QDialog, QtWidgets.QMainWindow)):
                 try:
-                    hwnd = int(dialog.winId())
-                    if hwnd:
-                        import ctypes
-                        DWMWA_USE_IMMERSIVE_DARK_MODE = 20
-                        DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1 = 19
-                        
-                        # Try both API versions
-                        for attribute in [DWMWA_USE_IMMERSIVE_DARK_MODE, DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1]:
-                            try:
-                                result = ctypes.windll.dwmapi.DwmSetWindowAttribute(
-                                    hwnd,
-                                    attribute,
-                                    ctypes.byref(ctypes.c_int(1 if is_dark else 0)),
-                                    ctypes.sizeof(ctypes.c_int)
-                                )
-                                if result == 0:
-                                    dialog.update()
-                                    dialog.repaint()
-                                    break
-                            except:
-                                continue
-                except:
-                    pass
+                    # Apply title bar theme to each window/dialog
+                    self._apply_title_bar_theme_to_window(widget, is_dark)
+                    
+                    # If it's a dialog, also force its stylesheet update
+                    if isinstance(widget, QtWidgets.QDialog) and hasattr(widget, 'parent_window'):
+                        if widget.parent_window == self:  # Only update dialogs that belong to this main window
+                            widget.setStyleSheet(self._get_dialog_stylesheet())
+                            widget.update()
+                            widget.repaint()
+                except Exception as e:
+                    logger.debug(f"Failed to apply theme to {widget.__class__.__name__}: {e}")
+        
+        # Store the current theme state globally so new windows can pick it up
+        QtWidgets.QApplication.instance().setProperty('dark_theme_enabled', is_dark)
         
         # Main window style
         main_style = f"""
@@ -2732,6 +2730,91 @@ class MainWindow(QtWidgets.QMainWindow):
         self.gpu_label.setStyleSheet(f'font-size: 9pt; color: {colors["text_light"]};')
         self.performance_label.setStyleSheet(f'font-size: 9pt; color: {colors["text_light"]};')
     
+    def _get_dialog_stylesheet(self):
+        """
+        Get the stylesheet for dialogs to match the main window theme.
+        """
+        colors = self.get_theme_styles()
+        
+        return f"""
+            QDialog {{
+                background-color: {colors['background']};
+                color: {colors['foreground']};
+            }}
+            QGroupBox {{
+                font-size: 9pt;
+                font-weight: bold;
+                border: 1px solid {colors['border']};
+                border-radius: 5px;
+                margin-top: 10px;
+                padding-top: 5px;
+                color: {colors['foreground']};
+            }}
+            QGroupBox::title {{
+                subcontrol-origin: margin;
+                left: 10px;
+                padding: 0 5px 0 5px;
+                color: {colors['foreground']};
+            }}
+            QLabel {{
+                font-size: 9pt;
+                color: {colors['foreground']};
+            }}
+            QComboBox {{
+                font-size: 9pt;
+                min-height: 20px;
+                padding: 2px 6px;
+                min-width: 90px;
+                background-color: {colors['input_bg']};
+                border: 1px solid {colors['border']};
+                border-radius: 3px;
+                color: {colors['foreground']};
+            }}
+            QComboBox::drop-down {{
+                border: none;
+                width: 20px;
+                subcontrol-origin: padding;
+                subcontrol-position: center right;
+            }}
+            QComboBox::down-arrow {{
+                image: none;
+                width: 0px;
+                height: 0px;
+                border-left: 5px solid transparent;
+                border-right: 5px solid transparent;
+                border-top: 6px solid {colors['foreground']};
+                margin: 0px;
+                padding: 0px;
+            }}
+            QComboBox::down-arrow:hover {{
+                border-top-color: {colors['accent']};
+            }}
+            QComboBox QAbstractItemView {{
+                background-color: {colors['input_bg']};
+                border: 1px solid {colors['border']};
+                border-radius: 3px;
+                color: {colors['foreground']};
+                selection-background-color: {colors['accent']};
+                selection-color: white;
+            }}
+            QPushButton {{
+                font-size: 9pt;
+                min-height: 20px;
+                padding: 2px 4px;
+                min-width: 70px;
+                background-color: {colors['button_bg']};
+                border: 1px solid {colors['border']};
+                border-radius: 3px;
+                color: {colors['foreground']};
+            }}
+            QPushButton:hover {{
+                background-color: {colors['button_hover']};
+            }}
+            QPushButton:pressed {{
+                background-color: {colors['border']};
+            }}
+        """
+    
     def on_theme_changed(self, theme_text):
         """
         Handle theme dropdown selection change.
@@ -2845,30 +2928,9 @@ class MainWindow(QtWidgets.QMainWindow):
         try:
             dialog = SettingsDialog(self)
             
-            # Apply title bar theming to the dialog
+            # Apply title bar theming to the dialog immediately
             is_dark = self.get_effective_dark_mode()
-            try:
-                hwnd = int(dialog.winId())
-                if hwnd:
-                    import ctypes
-                    DWMWA_USE_IMMERSIVE_DARK_MODE = 20
-                    DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1 = 19
-                    
-                    # Try both API versions
-                    for attribute in [DWMWA_USE_IMMERSIVE_DARK_MODE, DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1]:
-                        try:
-                            result = ctypes.windll.dwmapi.DwmSetWindowAttribute(
-                                hwnd,
-                                attribute,
-                                ctypes.byref(ctypes.c_int(1 if is_dark else 0)),
-                                ctypes.sizeof(ctypes.c_int)
-                            )
-                            if result == 0:  # S_OK
-                                break
-                        except:
-                            continue
-            except:
-                pass  # Ignore title bar theming errors
+            self._apply_title_bar_theme_to_window(dialog, is_dark)
             
             dialog.exec()
             
@@ -2879,14 +2941,28 @@ class MainWindow(QtWidgets.QMainWindow):
         """
         Update the theme combo box text based on current theme mode and system state.
         """
-        if self.theme_mode == 'system':
-            system_dark = self.is_system_dark_theme()
-            display_text = f"System ({'Dark' if system_dark else 'Light'})"
-            # Update the first item's text to show current system theme
-            self.theme_combo.setItemText(0, display_text)
-        else:
-            # Reset system item text
-            self.theme_combo.setItemText(0, 'System')
+        # Temporarily disconnect the signal to prevent triggering theme changes
+        self.theme_combo.currentTextChanged.disconnect()
+        
+        try:
+            if self.theme_mode == 'system':
+                system_dark = self.is_system_dark_theme()
+                display_text = f"System ({'Dark' if system_dark else 'Light'})"
+                # Update the first item's text to show current system theme
+                self.theme_combo.setItemText(0, display_text)
+                # Ensure the combo shows the correct selection
+                self.theme_combo.setCurrentIndex(0)
+            else:
+                # Reset system item text
+                self.theme_combo.setItemText(0, 'System')
+                # Set the correct selection based on theme mode
+                if self.theme_mode == 'light':
+                    self.theme_combo.setCurrentIndex(1)
+                elif self.theme_mode == 'dark':
+                    self.theme_combo.setCurrentIndex(2)
+        finally:
+            # Reconnect the signal
+            self.theme_combo.currentTextChanged.connect(self.on_theme_changed)
     
     def init_ui(self):
         """
