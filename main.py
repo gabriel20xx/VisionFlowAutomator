@@ -1299,11 +1299,25 @@ class MainWindow(QtWidgets.QMainWindow):
         self._last_warning_messages = {}  # Track last warning messages to prevent duplicates
         self._warning_cooldown = 30  # Seconds between duplicate warnings
         
+        # Resource usage tracking for max/average values
+        self._resource_history = {
+            'memory_mb': [],
+            'memory_percent': [],
+            'cpu_percent': [],
+            'system_memory_percent': [],
+            'gpu_utilization': [],
+            'loop_times': []
+        }
+        self._max_resource_samples = 50  # Keep last 50 samples for statistics
+        
         self.init_ui()
         self.load_scenarios()
         
         # Restore window geometry (size and position)
         self._restore_window_geometry()
+        
+        # Apply theme after restoration (delayed to ensure window is ready)
+        QtCore.QTimer.singleShot(100, self._apply_initial_theme)
         
         # Setup cleanup on close
         self.setAttribute(QtCore.Qt.WidgetAttribute.WA_DeleteOnClose)
@@ -1318,14 +1332,10 @@ class MainWindow(QtWidgets.QMainWindow):
         # Initial resource display update (delayed to prevent startup hanging)
         QtCore.QTimer.singleShot(2000, self._enable_resource_monitoring)
         
-        # Setup system theme monitoring timer (only when in system mode)
+        # Setup system theme monitoring timer (will be started by _apply_initial_theme if needed)
         self.theme_monitor_timer = QtCore.QTimer()
         self.theme_monitor_timer.timeout.connect(self._check_system_theme_change)
         self._last_system_theme = None
-        
-        # Start theme monitoring if in system mode
-        if self.theme_mode == 'system':
-            self.theme_monitor_timer.start(5000)  # Check every 5 seconds
     
     def _check_system_theme_change(self):
         """
@@ -1351,6 +1361,63 @@ class MainWindow(QtWidgets.QMainWindow):
                 
         except Exception as e:
             logger.debug(f"Error checking system theme change: {e}")
+    
+    def _update_resource_history(self, memory_info):
+        """
+        Update resource usage history for calculating max/average values.
+        """
+        try:
+            # Add current values to history
+            if memory_info.get('has_psutil', False):
+                self._resource_history['memory_mb'].append(memory_info['process_memory_mb'])
+                self._resource_history['memory_percent'].append(memory_info['process_memory_percent'])
+                self._resource_history['cpu_percent'].append(memory_info['cpu_percent'])
+                self._resource_history['system_memory_percent'].append(memory_info['system_memory_percent'])
+            
+            if memory_info.get('gpu_has_gpu', False):
+                self._resource_history['gpu_utilization'].append(memory_info['gpu_utilization_percent'])
+            
+            # Add loop time if available
+            if hasattr(self, '_loop_times') and self._loop_times:
+                avg_loop_time = sum(self._loop_times) / len(self._loop_times)
+                self._resource_history['loop_times'].append(avg_loop_time * 1000)  # Convert to ms
+            
+            # Keep only the last N samples for each metric
+            for key in self._resource_history:
+                if len(self._resource_history[key]) > self._max_resource_samples:
+                    self._resource_history[key] = self._resource_history[key][-self._max_resource_samples:]
+                    
+        except Exception as e:
+            logger.debug(f"Error updating resource history: {e}")
+    
+    def _get_resource_stats(self, values_list):
+        """
+        Calculate current, max, and average values from a list of values.
+        Returns (current, max, avg) or (0, 0, 0) if list is empty.
+        """
+        if not values_list:
+            return 0, 0, 0
+        
+        current = values_list[-1] if values_list else 0
+        max_val = max(values_list)
+        avg_val = sum(values_list) / len(values_list)
+        
+        return current, max_val, avg_val
+    
+    def _apply_initial_theme(self):
+        """
+        Apply the initial theme and start theme monitoring after UI is ready.
+        """
+        # Apply the theme (includes title bar theming)
+        self.apply_theme()
+        self._update_theme_combo_text()
+        
+        # Start theme monitoring if in system mode
+        if self.theme_mode == 'system':
+            self._last_system_theme = self.is_system_dark_theme()
+            self.theme_monitor_timer.start(5000)  # Check every 5 seconds
+        
+        logger.debug(f"Applied initial theme: {self.theme_mode}")
     
     def _enable_resource_monitoring(self):
         """Enable resource monitoring after startup delay."""
@@ -1443,17 +1510,23 @@ class MainWindow(QtWidgets.QMainWindow):
     
     def _update_resource_display(self, memory_info):
         """
-        Update the resource usage display in the UI with theme-aware colors.
+        Update the resource usage display in the UI with theme-aware colors and max/average statistics.
         """
         try:
             colors = self.get_theme_styles()
             
-            # Memory usage
+            # Update resource history for statistics
+            self._update_resource_history(memory_info)
+            
+            # Memory usage with statistics
             if memory_info.get('has_psutil', False):
-                memory_text = f"Memory: {memory_info['process_memory_mb']:.1f}MB ({memory_info['process_memory_percent']:.1f}%)"
-                memory_color = colors['error'] if memory_info['process_memory_percent'] > 10 else colors['success']
+                current_mb, max_mb, avg_mb = self._get_resource_stats(self._resource_history['memory_mb'])
+                current_pct, max_pct, avg_pct = self._get_resource_stats(self._resource_history['memory_percent'])
+                
+                memory_text = f"Memory: {current_mb:.1f}MB ({current_pct:.1f}%)\nMax: {max_mb:.1f}MB ({max_pct:.1f}%) | Avg: {avg_mb:.1f}MB ({avg_pct:.1f}%)"
+                memory_color = colors['error'] if current_pct > 10 else colors['success']
             else:
-                memory_text = "Memory: N/A (psutil needed)"
+                memory_text = "Memory: N/A (psutil needed)\nInstall psutil for detailed monitoring"
                 memory_color = colors['warning']
             
             self.memory_label.setText(memory_text)
@@ -1464,36 +1537,40 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.memory_label.mousePressEvent = lambda event: self._show_psutil_info()
                 self.memory_label.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCursor))
             
-            # CPU usage
+            # CPU usage with statistics
             if memory_info.get('has_psutil', False):
-                cpu_text = f"CPU: {memory_info['cpu_percent']:.1f}%"
-                cpu_color = colors['error'] if memory_info['cpu_percent'] > 50 else colors['success']
+                current_cpu, max_cpu, avg_cpu = self._get_resource_stats(self._resource_history['cpu_percent'])
+                
+                cpu_text = f"CPU: {current_cpu:.1f}%\nMax: {max_cpu:.1f}% | Avg: {avg_cpu:.1f}%"
+                cpu_color = colors['error'] if current_cpu > 50 else colors['success']
             else:
-                cpu_text = "CPU: N/A"
+                cpu_text = "CPU: N/A\nInstall psutil for monitoring"
                 cpu_color = colors['text_light']
             
             self.cpu_label.setText(cpu_text)
             self.cpu_label.setStyleSheet(f'font-size: 9pt; color: {cpu_color};')
             
-            # System memory
+            # System memory with statistics
             if memory_info.get('has_psutil', False):
-                system_text = f"System: {memory_info['system_memory_percent']:.1f}% ({memory_info['system_memory_available_gb']:.1f}GB free)"
-                system_color = colors['error'] if memory_info['system_memory_percent'] > 85 else colors['success']
+                current_sys, max_sys, avg_sys = self._get_resource_stats(self._resource_history['system_memory_percent'])
+                
+                system_text = f"System: {current_sys:.1f}% ({memory_info['system_memory_available_gb']:.1f}GB free)\nMax: {max_sys:.1f}% | Avg: {avg_sys:.1f}%"
+                system_color = colors['error'] if current_sys > 85 else colors['success']
             else:
-                system_text = "System: N/A"
+                system_text = "System: N/A\nInstall psutil for monitoring"
                 system_color = colors['text_light']
             
             self.system_memory_label.setText(system_text)
             self.system_memory_label.setStyleSheet(f'font-size: 9pt; color: {system_color};')
             
-            # Cache info
-            cache_text = f"Cache: {memory_info['template_cache_size']} templates, {memory_info['cooldown_entries']} cooldowns"
+            # Cache info (enhanced display)
+            cache_text = f"Cache: {memory_info['template_cache_size']} templates\n{memory_info['cooldown_entries']} cooldowns"
             cache_color = colors['warning'] if memory_info['template_cache_size'] > 20 else colors['info']
             
             self.cache_label.setText(cache_text)
             self.cache_label.setStyleSheet(f'font-size: 9pt; color: {cache_color};')
             
-            # GPU memory info
+            # GPU memory info with statistics
             gpu_method = memory_info.get('gpu_method', 'unknown')
             
             if memory_info.get('gpu_has_gpu', False):
@@ -1501,24 +1578,27 @@ class MainWindow(QtWidgets.QMainWindow):
                 gpu_total_mb = memory_info.get('gpu_total_mb', 0)
                 gpu_utilization = memory_info.get('gpu_utilization_percent', 0)
                 
+                # Get GPU statistics
+                current_gpu, max_gpu, avg_gpu = self._get_resource_stats(self._resource_history['gpu_utilization'])
+                
                 if gpu_total_mb > 0:
-                    gpu_text = f"GPU: {gpu_used_mb:.0f}/{gpu_total_mb:.0f}MB ({gpu_utilization:.1f}%)"
-                    gpu_color = colors['error'] if gpu_utilization > 80 else colors['warning'] if gpu_utilization > 60 else colors['success']
+                    gpu_text = f"GPU: {gpu_used_mb:.0f}/{gpu_total_mb:.0f}MB ({current_gpu:.1f}%)\nMax: {max_gpu:.1f}% | Avg: {avg_gpu:.1f}%"
+                    gpu_color = colors['error'] if current_gpu > 80 else colors['warning'] if current_gpu > 60 else colors['success']
                     
                     # Add GPU name as tooltip
                     gpu_name = memory_info.get('gpu_name', 'Unknown GPU')
                     self.gpu_label.setToolTip(f"GPU: {gpu_name} (detected via {gpu_method})")
                 else:
-                    gpu_text = f"GPU: Detected ({gpu_method})"
+                    gpu_text = f"GPU: Detected ({gpu_method})\nUtilization: {current_gpu:.1f}%"
                     gpu_color = colors['info']
                     gpu_name = memory_info.get('gpu_name', 'Unknown GPU')
                     self.gpu_label.setToolTip(f"GPU: {gpu_name} (limited info via {gpu_method})")
             elif gpu_method == 'loading':
-                gpu_text = "GPU: Loading..."
+                gpu_text = "GPU: Loading...\nDetection in progress"
                 gpu_color = colors['warning']
                 self.gpu_label.setToolTip("GPU detection in progress...")
             else:
-                gpu_text = "GPU: Not detected"
+                gpu_text = "GPU: Not detected\nClick for setup info"
                 gpu_color = colors['text_light']
                 self.gpu_label.setToolTip(
                     "No GPU detected or GPU monitoring libraries not available.\n\n"
@@ -1542,13 +1622,14 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.gpu_label.mousePressEvent = None
                 self.gpu_label.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.ArrowCursor))
             
-            # Performance info
+            # Performance info with statistics
             if hasattr(self, '_loop_times') and self._loop_times:
-                avg_time = sum(self._loop_times) / len(self._loop_times)
-                perf_text = f"Performance: {avg_time*1000:.0f}ms avg loop time"
-                perf_color = colors['error'] if avg_time > 0.5 else colors['success']
+                current_loop, max_loop, avg_loop = self._get_resource_stats(self._resource_history['loop_times'])
+                
+                perf_text = f"Performance: {current_loop:.0f}ms loop time\nMax: {max_loop:.0f}ms | Avg: {avg_loop:.0f}ms"
+                perf_color = colors['error'] if current_loop > 500 else colors['success']
             else:
-                perf_text = "Performance: Not running"
+                perf_text = "Performance: Not running\nStart automation to see metrics"
                 perf_color = colors['text_light']
             
             self.performance_label.setText(perf_text)
@@ -1556,7 +1637,7 @@ class MainWindow(QtWidgets.QMainWindow):
             
             # Show error if any
             if 'error' in memory_info:
-                self.performance_label.setText(f"Error: {memory_info['error'][:50]}...")
+                self.performance_label.setText(f"Error: {memory_info['error'][:30]}...\nCheck logs for details")
                 self.performance_label.setStyleSheet(f'font-size: 9pt; color: {colors["error"]};')
                 
         except Exception as e:
@@ -1564,17 +1645,17 @@ class MainWindow(QtWidgets.QMainWindow):
             colors = self.get_theme_styles()
             # Show basic fallback info with theme-aware colors
             error_color = colors['error']
-            self.memory_label.setText("Memory: Error")
+            self.memory_label.setText("Memory: Error\nCheck logs for details")
             self.memory_label.setStyleSheet(f'font-size: 9pt; color: {error_color};')
-            self.cpu_label.setText("CPU: Error")
+            self.cpu_label.setText("CPU: Error\nCheck logs for details")
             self.cpu_label.setStyleSheet(f'font-size: 9pt; color: {error_color};')
-            self.system_memory_label.setText("System: Error")
+            self.system_memory_label.setText("System: Error\nCheck logs for details")
             self.system_memory_label.setStyleSheet(f'font-size: 9pt; color: {error_color};')
-            self.cache_label.setText("Cache: Error")
+            self.cache_label.setText("Cache: Error\nCheck logs for details")
             self.cache_label.setStyleSheet(f'font-size: 9pt; color: {error_color};')
-            self.gpu_label.setText("GPU: Error")
+            self.gpu_label.setText("GPU: Error\nCheck logs for details")
             self.gpu_label.setStyleSheet(f'font-size: 9pt; color: {error_color};')
-            self.performance_label.setText(f"Display Error: {str(e)[:30]}...")
+            self.performance_label.setText(f"Display Error: {str(e)[:20]}...\nResource monitoring failed")
             self.performance_label.setStyleSheet(f'font-size: 9pt; color: {error_color};')
     
     def stop_monitoring(self):
@@ -1594,7 +1675,6 @@ class MainWindow(QtWidgets.QMainWindow):
             self.cache_label.hide()
             self.gpu_label.hide()
             self.performance_label.hide()
-            self.interval_label.hide()
             self.update_interval_combo.hide()
             self.toggle_resources_btn.setText('Show Resources')
             self.resource_widgets_visible = False
@@ -1606,7 +1686,6 @@ class MainWindow(QtWidgets.QMainWindow):
             self.cache_label.show()
             self.gpu_label.show()
             self.performance_label.show()
-            self.interval_label.show()
             self.update_interval_combo.show()
             self.toggle_resources_btn.setText('Hide Resources')
             self.resource_widgets_visible = True
@@ -1698,6 +1777,7 @@ class MainWindow(QtWidgets.QMainWindow):
             # Update with window geometry and settings
             existing_config['main_window'] = geometry_data
             existing_config['update_interval'] = self.update_interval_combo.currentData()
+            existing_config['theme_mode'] = self.theme_mode
             
             with open(config_path, 'w') as f:
                 json.dump(existing_config, f, indent=2)
@@ -1757,6 +1837,16 @@ class MainWindow(QtWidgets.QMainWindow):
                         self.update_interval_combo.setCurrentIndex(i)
                         break
                 logger.debug(f"Restored update interval: {saved_interval}ms")
+            
+            # Restore theme mode if saved
+            saved_theme = config.get('theme_mode')
+            if saved_theme and saved_theme in ['system', 'light', 'dark']:
+                self.theme_mode = saved_theme
+                # Update the combo box to match the restored theme
+                theme_display_map = {'system': 'System', 'light': 'Light', 'dark': 'Dark'}
+                theme_display = theme_display_map.get(saved_theme, 'System')
+                self.theme_combo.setCurrentText(theme_display)
+                logger.debug(f"Restored theme mode: {saved_theme}")
             
             logger.debug(f"Restored window geometry: x={x}, y={y}, w={width}, h={height}")
             
@@ -1831,6 +1921,9 @@ class MainWindow(QtWidgets.QMainWindow):
             self._loop_times.clear()
         if hasattr(self, '_step_cooldown'):
             self._step_cooldown.clear()
+        if hasattr(self, '_resource_history'):
+            for key in self._resource_history:
+                self._resource_history[key].clear()
         
         # Force garbage collection
         gc.collect()
@@ -2093,8 +2186,8 @@ class MainWindow(QtWidgets.QMainWindow):
         colors = self.get_theme_styles()
         is_dark = self.get_effective_dark_mode()
         
-        # Apply dark title bar if in dark mode
-        self.apply_dark_title_bar(is_dark)
+        # Apply dark title bar if in dark mode (with small delay to ensure window is ready)
+        QtCore.QTimer.singleShot(10, lambda: self.apply_dark_title_bar(is_dark))
         
         # Main window style
         main_style = f"""
@@ -2193,7 +2286,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.cache_label.setStyleSheet(f'font-size: 9pt; color: {colors["text_light"]};')
         self.gpu_label.setStyleSheet(f'font-size: 9pt; color: {colors["text_light"]};')
         self.performance_label.setStyleSheet(f'font-size: 9pt; color: {colors["text_light"]};')
-        self.interval_label.setStyleSheet(f'font-size: 9pt; color: {colors["text_light"]};')
     
     def on_theme_changed(self, theme_text):
         """
@@ -2222,6 +2314,9 @@ class MainWindow(QtWidgets.QMainWindow):
             
             self.apply_theme()
             self._update_theme_combo_text()
+            
+            # Save the theme preference immediately
+            self._save_window_geometry()
             
             logger.info(f'Theme changed to: {self.theme_mode} mode')
     
@@ -2389,15 +2484,13 @@ class MainWindow(QtWidgets.QMainWindow):
         self.performance_label = QtWidgets.QLabel('Performance: --')
         resource_layout.addWidget(self.performance_label, 2, 0, 1, 3)
 
-        # Controls row (toggle button, update interval, and theme selector)
-        self.toggle_resources_btn = QtWidgets.QPushButton('Hide Resources')
-        self.toggle_resources_btn.setMaximumWidth(100)
-        self.toggle_resources_btn.setToolTip('Toggle resource usage display. Install psutil for detailed system metrics.')
-        self.toggle_resources_btn.clicked.connect(self._toggle_resource_display)
-        resource_layout.addWidget(self.toggle_resources_btn, 3, 0)
-
-        # Update interval controls
-        self.interval_label = QtWidgets.QLabel('Update:')
+        # Controls row - Update interval group
+        interval_group = QtWidgets.QGroupBox('Update Interval')
+        interval_group.setSizePolicy(QtWidgets.QSizePolicy.Policy.Preferred, QtWidgets.QSizePolicy.Policy.Fixed)
+        interval_layout = QtWidgets.QHBoxLayout()
+        interval_layout.setContentsMargins(4, 4, 4, 4)
+        interval_layout.setSpacing(4)
+        
         self.update_interval_combo = QtWidgets.QComboBox()
         self.update_interval_combo.setMaximumWidth(80)
         self.update_interval_combo.setToolTip('Set resource monitoring update interval')
@@ -2419,8 +2512,19 @@ class MainWindow(QtWidgets.QMainWindow):
         self.update_interval_combo.setCurrentIndex(2)
         self.update_interval_combo.currentIndexChanged.connect(self._on_update_interval_changed)
         
-        resource_layout.addWidget(self.interval_label, 3, 1)
-        resource_layout.addWidget(self.update_interval_combo, 3, 2)
+        interval_layout.addWidget(self.update_interval_combo)
+        interval_layout.addStretch(1)
+        interval_group.setLayout(interval_layout)
+        
+        # Toggle button
+        self.toggle_resources_btn = QtWidgets.QPushButton('Hide Resources')
+        self.toggle_resources_btn.setMaximumWidth(100)
+        self.toggle_resources_btn.setToolTip('Toggle resource usage display. Install psutil for detailed system metrics.')
+        self.toggle_resources_btn.clicked.connect(self._toggle_resource_display)
+        
+        # Add controls to layout
+        resource_layout.addWidget(interval_group, 3, 0)
+        resource_layout.addWidget(self.toggle_resources_btn, 3, 1)
 
         self.resource_group.setLayout(resource_layout)
         self.resource_widgets_visible = True
