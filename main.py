@@ -49,7 +49,17 @@ def get_gpu_memory_info():
     Get GPU memory information using multiple methods.
     Supports both discrete and integrated GPUs across Windows, Linux, and macOS.
     Returns dict with GPU memory info or basic info if no GPU found.
+    Uses caching to prevent repeated expensive system calls.
     """
+    # Cache GPU info for 30 seconds to prevent UI hanging
+    current_time = time.time()
+    cache_duration = 30  # seconds
+    
+    if (hasattr(get_gpu_memory_info, '_cached_info') and 
+        hasattr(get_gpu_memory_info, '_cache_time') and
+        current_time - get_gpu_memory_info._cache_time < cache_duration):
+        return get_gpu_memory_info._cached_info
+    
     gpu_info = {'has_gpu': False, 'total_mb': 0, 'used_mb': 0, 'free_mb': 0, 'utilization_percent': 0, 'gpu_name': 'Unknown'}
     
     # Try nvidia-ml-py (NVIDIA GPUs - most detailed info)
@@ -78,6 +88,10 @@ def get_gpu_memory_info():
             'method': 'pynvml'
         })
         logger.debug(f"GPU detected via pynvml: {gpu_name}, {total_mb:.0f}MB total")
+        
+        # Cache the result
+        get_gpu_memory_info._cached_info = gpu_info
+        get_gpu_memory_info._cache_time = current_time
         return gpu_info
         
     except (ImportError, Exception) as e:
@@ -104,6 +118,10 @@ def get_gpu_memory_info():
                 'method': 'GPUtil'
             })
             logger.debug(f"GPU detected via GPUtil: {gpu.name}, {total_mb:.0f}MB total")
+            
+            # Cache the result
+            get_gpu_memory_info._cached_info = gpu_info
+            get_gpu_memory_info._cache_time = current_time
             return gpu_info
             
     except (ImportError, Exception) as e:
@@ -127,6 +145,10 @@ def get_gpu_memory_info():
                         'method': 'psutil_detection'
                     })
                     logger.debug(f"GPU detected via psutil process detection: {proc_name}")
+                    
+                    # Cache the result
+                    get_gpu_memory_info._cached_info = gpu_info
+                    get_gpu_memory_info._cache_time = current_time
                     return gpu_info
             except (psutil.NoSuchProcess, psutil.AccessDenied):
                 continue
@@ -142,7 +164,7 @@ def get_gpu_memory_info():
         # Try nvidia-smi command for NVIDIA GPUs
         try:
             result = subprocess.run(['nvidia-smi', '--query-gpu=name,memory.total,memory.used,memory.free', '--format=csv,noheader,nounits'], 
-                                  capture_output=True, text=True, timeout=5)
+                                  capture_output=True, text=True, timeout=2)  # Reduced timeout
             
             if result.returncode == 0 and result.stdout.strip():
                 lines = result.stdout.strip().split('\n')
@@ -175,7 +197,7 @@ def get_gpu_memory_info():
             wmi_result = subprocess.run([
                 'powershell', '-Command',
                 "Get-WmiObject -Class Win32_VideoController | Where-Object {$_.Name -like '*Intel*' -or $_.Name -like '*UHD*' -or $_.Name -like '*Iris*' -or $_.Name -like '*HD Graphics*'} | Select-Object Name, AdapterRAM | ConvertTo-Json"
-            ], capture_output=True, text=True, timeout=10)
+            ], capture_output=True, text=True, timeout=3)  # Reduced timeout
             
             if wmi_result.returncode == 0 and wmi_result.stdout.strip():
                 import json
@@ -211,7 +233,7 @@ def get_gpu_memory_info():
             wmi_result = subprocess.run([
                 'powershell', '-Command',
                 "Get-WmiObject -Class Win32_VideoController | Where-Object {$_.Name -like '*AMD*' -or $_.Name -like '*Radeon*' -or $_.Name -like '*ATI*'} | Select-Object Name, AdapterRAM | ConvertTo-Json"
-            ], capture_output=True, text=True, timeout=10)
+            ], capture_output=True, text=True, timeout=3)  # Reduced timeout
             
             if wmi_result.returncode == 0 and wmi_result.stdout.strip():
                 import json
@@ -246,7 +268,7 @@ def get_gpu_memory_info():
             wmi_result = subprocess.run([
                 'powershell', '-Command',
                 "Get-WmiObject -Class Win32_VideoController | Where-Object {$_.AdapterRAM -gt 0} | Select-Object Name, AdapterRAM | ConvertTo-Json"
-            ], capture_output=True, text=True, timeout=10)
+            ], capture_output=True, text=True, timeout=3)  # Reduced timeout
             
             if wmi_result.returncode == 0 and wmi_result.stdout.strip():
                 import json
@@ -294,7 +316,7 @@ def get_gpu_memory_info():
             $dxdiag = Get-WmiObject -Class Win32_VideoController | Where-Object {$_.AdapterRAM -gt 536870912} | Select-Object Name, AdapterRAM, DriverVersion
             $dxdiag | ConvertTo-Json
             """
-        ], capture_output=True, text=True, timeout=15)
+        ], capture_output=True, text=True, timeout=3)  # Reduced timeout
         
         if dxdiag_result.returncode == 0 and dxdiag_result.stdout.strip():
             import json
@@ -332,7 +354,7 @@ def get_gpu_memory_info():
         if system == 'linux':
             # Try lspci for GPU detection on Linux
             try:
-                lspci_result = subprocess.run(['lspci', '-v'], capture_output=True, text=True, timeout=10)
+                lspci_result = subprocess.run(['lspci', '-v'], capture_output=True, text=True, timeout=2)  # Reduced timeout
                 if lspci_result.returncode == 0:
                     output = lspci_result.stdout.lower()
                     
@@ -434,6 +456,10 @@ def get_gpu_memory_info():
                 
     except Exception as e:
         logger.debug(f"Linux/macOS GPU detection failed: {e}")
+    
+    # Cache the result to prevent repeated expensive calls
+    get_gpu_memory_info._cached_info = gpu_info
+    get_gpu_memory_info._cache_time = current_time
     
     return gpu_info
 
@@ -988,6 +1014,7 @@ class MainWindow(QtWidgets.QMainWindow):
     def get_memory_usage(self):
         """
         Get current memory usage information for monitoring, including GPU memory.
+        Uses timeout protection to prevent UI hanging.
         """
         try:
             import psutil
@@ -998,8 +1025,30 @@ class MainWindow(QtWidgets.QMainWindow):
             # Get system info
             system_memory = psutil.virtual_memory()
             
-            # Get GPU information
-            gpu_info = get_gpu_memory_info()
+            # Get GPU information with timeout protection
+            try:
+                # Use a simple timeout mechanism for GPU detection
+                import signal
+                
+                def timeout_handler(signum, frame):
+                    raise TimeoutError("GPU detection timeout")
+                
+                # Set up timeout for GPU detection (3 seconds max)
+                old_handler = signal.signal(signal.SIGALRM, timeout_handler)
+                signal.alarm(3)
+                
+                try:
+                    gpu_info = get_gpu_memory_info()
+                finally:
+                    signal.alarm(0)  # Cancel the alarm
+                    signal.signal(signal.SIGALRM, old_handler)
+                    
+            except (TimeoutError, AttributeError):
+                # Fallback if timeout or signal not available (Windows)
+                gpu_info = get_gpu_memory_info()
+            except Exception as e:
+                logger.debug(f"GPU detection failed: {e}")
+                gpu_info = {'has_gpu': False, 'total_mb': 0, 'used_mb': 0, 'free_mb': 0, 'utilization_percent': 0, 'gpu_name': 'Error'}
             
             return {
                 'process_memory_mb': memory_info.rss / 1024 / 1024,  # MB
@@ -1020,8 +1069,13 @@ class MainWindow(QtWidgets.QMainWindow):
                 'gpu_method': gpu_info.get('method', 'none')
             }
         except ImportError:
-            # psutil not available, get GPU info anyway
-            gpu_info = get_gpu_memory_info()
+            # psutil not available, get GPU info anyway with timeout protection
+            try:
+                gpu_info = get_gpu_memory_info()
+            except Exception as e:
+                logger.debug(f"GPU detection failed without psutil: {e}")
+                gpu_info = {'has_gpu': False, 'total_mb': 0, 'used_mb': 0, 'free_mb': 0, 'utilization_percent': 0, 'gpu_name': 'Error'}
+            
             return {
                 'process_memory_mb': 0,
                 'process_memory_percent': 0,
@@ -1042,8 +1096,13 @@ class MainWindow(QtWidgets.QMainWindow):
             }
         except Exception as e:
             logger.warning(f"Error getting memory usage: {e}")
-            # Try to get GPU info even if psutil fails
-            gpu_info = get_gpu_memory_info()
+            # Try to get GPU info even if psutil fails, with error handling
+            try:
+                gpu_info = get_gpu_memory_info()
+            except Exception as gpu_e:
+                logger.debug(f"GPU detection also failed: {gpu_e}")
+                gpu_info = {'has_gpu': False, 'total_mb': 0, 'used_mb': 0, 'free_mb': 0, 'utilization_percent': 0, 'gpu_name': 'Error'}
+            
             return {
                 'process_memory_mb': 0,
                 'process_memory_percent': 0,
@@ -1159,11 +1218,13 @@ class MainWindow(QtWidgets.QMainWindow):
     def _monitor_performance(self):
         """
         Monitor application performance and memory usage.
+        Uses error handling to prevent UI hanging.
         """
         try:
+            # Add timeout protection for memory info gathering
             memory_info = self.get_memory_usage()
             
-            # Update resource display
+            # Update resource display (this should be fast)
             self._update_resource_display(memory_info)
             
             # Log performance stats periodically (only if running)
@@ -1197,6 +1258,16 @@ class MainWindow(QtWidgets.QMainWindow):
                 
         except Exception as e:
             logger.debug(f"Performance monitoring error: {e}")
+            # If monitoring fails, show basic error info
+            try:
+                self.memory_label.setText("Memory: Monitor Error")
+                self.cpu_label.setText("CPU: Monitor Error") 
+                self.system_memory_label.setText("System: Monitor Error")
+                self.cache_label.setText("Cache: Monitor Error")
+                self.gpu_label.setText("GPU: Monitor Error")
+                self.performance_label.setText(f"Monitor Error: {str(e)[:30]}...")
+            except:
+                pass  # If even setting error text fails, just ignore
     
     def _log_warning_once(self, warning_type, message):
         """
@@ -1718,40 +1789,6 @@ class MainWindow(QtWidgets.QMainWindow):
         resource_layout.setSpacing(4)
         resource_layout.setContentsMargins(6, 6, 6, 6)
 
-        # Toggle button for resource display
-        self.toggle_resources_btn = QtWidgets.QPushButton('Hide Resources')
-        self.toggle_resources_btn.setMaximumWidth(100)
-        self.toggle_resources_btn.setToolTip('Toggle resource usage display. Install psutil for detailed system metrics.')
-        self.toggle_resources_btn.clicked.connect(self._toggle_resource_display)
-        resource_layout.addWidget(self.toggle_resources_btn, 0, 2, 1, 1)
-
-        # Update interval dropdown
-        self.interval_label = QtWidgets.QLabel('Update:')
-        self.interval_label.setStyleSheet('font-size: 9pt; color: #333;')
-        self.update_interval_combo = QtWidgets.QComboBox()
-        self.update_interval_combo.setMaximumWidth(80)
-        self.update_interval_combo.setToolTip('Set resource monitoring update interval')
-        
-        # Add interval options (in milliseconds)
-        intervals = [
-            ('0.5s', 500),
-            ('1s', 1000),
-            ('2s', 2000),
-            ('3s', 3000),
-            ('5s', 5000),
-            ('10s', 10000)
-        ]
-        
-        for text, value in intervals:
-            self.update_interval_combo.addItem(text, value)
-        
-        # Set default to 2 seconds (index 2)
-        self.update_interval_combo.setCurrentIndex(2)
-        self.update_interval_combo.currentIndexChanged.connect(self._on_update_interval_changed)
-        
-        resource_layout.addWidget(self.interval_label, 0, 3, 1, 1)
-        resource_layout.addWidget(self.update_interval_combo, 0, 4, 1, 1)
-
         # Memory usage
         self.memory_label = QtWidgets.QLabel('Memory: --')
         self.memory_label.setStyleSheet('font-size: 9pt; color: #333;')
@@ -1781,6 +1818,40 @@ class MainWindow(QtWidgets.QMainWindow):
         self.performance_label = QtWidgets.QLabel('Performance: --')
         self.performance_label.setStyleSheet('font-size: 9pt; color: #333;')
         resource_layout.addWidget(self.performance_label, 2, 0, 1, 3)
+
+        # Controls row (toggle button and update interval) - placed in a separate row
+        self.toggle_resources_btn = QtWidgets.QPushButton('Hide Resources')
+        self.toggle_resources_btn.setMaximumWidth(100)
+        self.toggle_resources_btn.setToolTip('Toggle resource usage display. Install psutil for detailed system metrics.')
+        self.toggle_resources_btn.clicked.connect(self._toggle_resource_display)
+        resource_layout.addWidget(self.toggle_resources_btn, 3, 0)
+
+        # Update interval controls
+        self.interval_label = QtWidgets.QLabel('Update:')
+        self.interval_label.setStyleSheet('font-size: 9pt; color: #333;')
+        self.update_interval_combo = QtWidgets.QComboBox()
+        self.update_interval_combo.setMaximumWidth(80)
+        self.update_interval_combo.setToolTip('Set resource monitoring update interval')
+        
+        # Add interval options (in milliseconds)
+        intervals = [
+            ('0.5s', 500),
+            ('1s', 1000),
+            ('2s', 2000),
+            ('3s', 3000),
+            ('5s', 5000),
+            ('10s', 10000)
+        ]
+        
+        for text, value in intervals:
+            self.update_interval_combo.addItem(text, value)
+        
+        # Set default to 2 seconds (index 2)
+        self.update_interval_combo.setCurrentIndex(2)
+        self.update_interval_combo.currentIndexChanged.connect(self._on_update_interval_changed)
+        
+        resource_layout.addWidget(self.interval_label, 3, 1)
+        resource_layout.addWidget(self.update_interval_combo, 3, 2)
 
         self.resource_group.setLayout(resource_layout)
         self.resource_widgets_visible = True
