@@ -603,16 +603,45 @@ class MainWindow(QtWidgets.QMainWindow):
             import psutil
             process = psutil.Process()
             memory_info = process.memory_info()
+            cpu_percent = process.cpu_percent()
+            
+            # Get system info
+            system_memory = psutil.virtual_memory()
+            
             return {
-                'rss': memory_info.rss / 1024 / 1024,  # MB
-                'vms': memory_info.vms / 1024 / 1024,  # MB
-                'percent': process.memory_percent()
+                'process_memory_mb': memory_info.rss / 1024 / 1024,  # MB
+                'process_memory_percent': process.memory_percent(),
+                'cpu_percent': cpu_percent,
+                'system_memory_percent': system_memory.percent,
+                'system_memory_available_gb': system_memory.available / 1024 / 1024 / 1024,  # GB
+                'template_cache_size': len(template_cache._cache) if hasattr(template_cache, '_cache') else 0,
+                'cooldown_entries': len(self._step_cooldown) if hasattr(self, '_step_cooldown') else 0,
+                'has_psutil': True
             }
         except ImportError:
             # psutil not available, return basic info
             return {
-                'template_cache_size': len(template_cache._cache),
-                'cooldown_entries': len(self._step_cooldown) if hasattr(self, '_step_cooldown') else 0
+                'process_memory_mb': 0,
+                'process_memory_percent': 0,
+                'cpu_percent': 0,
+                'system_memory_percent': 0,
+                'system_memory_available_gb': 0,
+                'template_cache_size': len(template_cache._cache) if hasattr(template_cache, '_cache') else 0,
+                'cooldown_entries': len(self._step_cooldown) if hasattr(self, '_step_cooldown') else 0,
+                'has_psutil': False
+            }
+        except Exception as e:
+            logger.warning(f"Error getting memory usage: {e}")
+            return {
+                'process_memory_mb': 0,
+                'process_memory_percent': 0,
+                'cpu_percent': 0,
+                'system_memory_percent': 0,
+                'system_memory_available_gb': 0,
+                'template_cache_size': len(template_cache._cache) if hasattr(template_cache, '_cache') else 0,
+                'cooldown_entries': len(self._step_cooldown) if hasattr(self, '_step_cooldown') else 0,
+                'has_psutil': False,
+                'error': str(e)
             }
 
     def stop_automation(self):
@@ -694,20 +723,23 @@ class MainWindow(QtWidgets.QMainWindow):
         # Setup periodic monitoring timer
         self.monitor_timer = QtCore.QTimer()
         self.monitor_timer.timeout.connect(self._monitor_performance)
-        self.monitor_timer.start(10000)  # Monitor every 10 seconds
+        self.monitor_timer.start(2000)  # Monitor every 2 seconds for responsive UI updates
+        
+        # Initial resource display update
+        QtCore.QTimer.singleShot(100, self._monitor_performance)
     
     def _monitor_performance(self):
         """
         Monitor application performance and memory usage.
         """
-        if not self.running:
-            return
-            
         try:
             memory_info = self.get_memory_usage()
             
-            # Log performance stats periodically
-            if hasattr(self, '_loop_times') and self._loop_times:
+            # Update resource display
+            self._update_resource_display(memory_info)
+            
+            # Log performance stats periodically (only if running)
+            if self.running and hasattr(self, '_loop_times') and self._loop_times:
                 avg_loop_time = sum(self._loop_times) / len(self._loop_times)
                 
                 # Warning thresholds
@@ -715,16 +747,132 @@ class MainWindow(QtWidgets.QMainWindow):
                     logger.warning(f"Performance issue: Average loop time {avg_loop_time:.3f}s")
                 
                 # Memory warning for cache-based monitoring
-                if 'template_cache_size' in memory_info and memory_info['template_cache_size'] > 20:
+                if memory_info.get('template_cache_size', 0) > 20:
                     logger.info(f"Template cache has {memory_info['template_cache_size']} entries")
                 
         except Exception as e:
             logger.debug(f"Performance monitoring error: {e}")
     
+    def _update_resource_display(self, memory_info):
+        """
+        Update the resource usage display in the UI.
+        """
+        try:
+            # Memory usage
+            if memory_info.get('has_psutil', False):
+                memory_text = f"Memory: {memory_info['process_memory_mb']:.1f}MB ({memory_info['process_memory_percent']:.1f}%)"
+                memory_color = '#d9534f' if memory_info['process_memory_percent'] > 10 else '#5cb85c'
+            else:
+                memory_text = "Memory: N/A (psutil needed)"
+                memory_color = '#f0ad4e'
+            
+            self.memory_label.setText(memory_text)
+            self.memory_label.setStyleSheet(f'font-size: 9pt; color: {memory_color};')
+            
+            # Make memory label clickable to show psutil installation info
+            if not memory_info.get('has_psutil', False):
+                self.memory_label.mousePressEvent = lambda event: self._show_psutil_info()
+                self.memory_label.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCursor))
+            
+            # CPU usage
+            if memory_info.get('has_psutil', False):
+                cpu_text = f"CPU: {memory_info['cpu_percent']:.1f}%"
+                cpu_color = '#d9534f' if memory_info['cpu_percent'] > 50 else '#5cb85c'
+            else:
+                cpu_text = "CPU: N/A"
+                cpu_color = '#777'
+            
+            self.cpu_label.setText(cpu_text)
+            self.cpu_label.setStyleSheet(f'font-size: 9pt; color: {cpu_color};')
+            
+            # System memory
+            if memory_info.get('has_psutil', False):
+                system_text = f"System: {memory_info['system_memory_percent']:.1f}% ({memory_info['system_memory_available_gb']:.1f}GB free)"
+                system_color = '#d9534f' if memory_info['system_memory_percent'] > 85 else '#5cb85c'
+            else:
+                system_text = "System: N/A"
+                system_color = '#777'
+            
+            self.system_memory_label.setText(system_text)
+            self.system_memory_label.setStyleSheet(f'font-size: 9pt; color: {system_color};')
+            
+            # Cache info
+            cache_text = f"Cache: {memory_info['template_cache_size']} templates, {memory_info['cooldown_entries']} cooldowns"
+            cache_color = '#f0ad4e' if memory_info['template_cache_size'] > 20 else '#5bc0de'
+            
+            self.cache_label.setText(cache_text)
+            self.cache_label.setStyleSheet(f'font-size: 9pt; color: {cache_color};')
+            
+            # Performance info
+            if hasattr(self, '_loop_times') and self._loop_times:
+                avg_time = sum(self._loop_times) / len(self._loop_times)
+                perf_text = f"Performance: {avg_time*1000:.0f}ms avg loop time"
+                perf_color = '#d9534f' if avg_time > 0.5 else '#5cb85c'
+            else:
+                perf_text = "Performance: Not running"
+                perf_color = '#777'
+            
+            self.performance_label.setText(perf_text)
+            self.performance_label.setStyleSheet(f'font-size: 9pt; color: {perf_color};')
+            
+            # Show error if any
+            if 'error' in memory_info:
+                self.performance_label.setText(f"Error: {memory_info['error'][:50]}...")
+                self.performance_label.setStyleSheet('font-size: 9pt; color: #d9534f;')
+                
+        except Exception as e:
+            logger.debug(f"Error updating resource display: {e}")
+            # Show basic fallback info
+            self.memory_label.setText("Memory: Error")
+            self.cpu_label.setText("CPU: Error")
+            self.system_memory_label.setText("System: Error")
+            self.cache_label.setText("Cache: Error")
+            self.performance_label.setText(f"Display Error: {str(e)[:30]}...")
+    
     def stop_monitoring(self):
         """Stop performance monitoring timer."""
         if hasattr(self, 'monitor_timer') and self.monitor_timer:
             self.monitor_timer.stop()
+    
+    def _toggle_resource_display(self):
+        """Toggle the visibility of resource usage widgets."""
+        if self.resource_widgets_visible:
+            # Hide resource widgets
+            self.memory_label.hide()
+            self.cpu_label.hide()
+            self.system_memory_label.hide()
+            self.cache_label.hide()
+            self.performance_label.hide()
+            self.toggle_resources_btn.setText('Show Resources')
+            self.resource_widgets_visible = False
+        else:
+            # Show resource widgets
+            self.memory_label.show()
+            self.cpu_label.show()
+            self.system_memory_label.show()
+            self.cache_label.show()
+            self.performance_label.show()
+            self.toggle_resources_btn.setText('Hide Resources')
+            self.resource_widgets_visible = True
+    
+    def _show_psutil_info(self):
+        """Show information about installing psutil for enhanced monitoring."""
+        msg = QtWidgets.QMessageBox(self)
+        msg.setWindowTitle("Enhanced Resource Monitoring")
+        msg.setIcon(QtWidgets.QMessageBox.Icon.Information)
+        msg.setText("Install psutil for detailed resource monitoring")
+        msg.setInformativeText(
+            "For detailed CPU, memory, and system resource monitoring, install the psutil package:\n\n"
+            "pip install psutil\n\n"
+            "This will enable:\n"
+            "• Process memory usage in MB and percentage\n"
+            "• CPU usage percentage\n"
+            "• System memory statistics\n"
+            "• Available system memory\n\n"
+            "Without psutil, only basic cache information is shown."
+        )
+        msg.setStandardButtons(QtWidgets.QMessageBox.StandardButton.Ok)
+        msg.exec()
     
     def closeEvent(self, event):
         """Handle application close event with proper cleanup."""
@@ -877,6 +1025,48 @@ class MainWindow(QtWidgets.QMainWindow):
         self.state_label.setStyleSheet('font-weight: bold; font-size: 11pt; color: #0055aa;')
         self.state_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignLeft | QtCore.Qt.AlignmentFlag.AlignVCenter)
 
+        # Resource usage display
+        self.resource_group = QtWidgets.QGroupBox('Resource Usage')
+        self.resource_group.setSizePolicy(QtWidgets.QSizePolicy.Policy.Preferred, QtWidgets.QSizePolicy.Policy.Fixed)
+        resource_layout = QtWidgets.QGridLayout()
+        resource_layout.setSpacing(4)
+        resource_layout.setContentsMargins(6, 6, 6, 6)
+
+        # Toggle button for resource display
+        self.toggle_resources_btn = QtWidgets.QPushButton('Hide Resources')
+        self.toggle_resources_btn.setMaximumWidth(100)
+        self.toggle_resources_btn.setToolTip('Toggle resource usage display. Install psutil for detailed system metrics.')
+        self.toggle_resources_btn.clicked.connect(self._toggle_resource_display)
+        resource_layout.addWidget(self.toggle_resources_btn, 0, 2, 1, 1)
+
+        # Memory usage
+        self.memory_label = QtWidgets.QLabel('Memory: --')
+        self.memory_label.setStyleSheet('font-size: 9pt; color: #333;')
+        resource_layout.addWidget(self.memory_label, 0, 0)
+
+        # CPU usage
+        self.cpu_label = QtWidgets.QLabel('CPU: --')
+        self.cpu_label.setStyleSheet('font-size: 9pt; color: #333;')
+        resource_layout.addWidget(self.cpu_label, 0, 1)
+
+        # System memory
+        self.system_memory_label = QtWidgets.QLabel('System: --')
+        self.system_memory_label.setStyleSheet('font-size: 9pt; color: #333;')
+        resource_layout.addWidget(self.system_memory_label, 1, 0)
+
+        # Cache info
+        self.cache_label = QtWidgets.QLabel('Cache: --')
+        self.cache_label.setStyleSheet('font-size: 9pt; color: #333;')
+        resource_layout.addWidget(self.cache_label, 1, 1)
+
+        # Performance info
+        self.performance_label = QtWidgets.QLabel('Performance: --')
+        self.performance_label.setStyleSheet('font-size: 9pt; color: #333;')
+        resource_layout.addWidget(self.performance_label, 2, 0, 1, 3)
+
+        self.resource_group.setLayout(resource_layout)
+        self.resource_widgets_visible = True
+
         # Main layout
         layout = QtWidgets.QGridLayout()
         layout.setHorizontalSpacing(6)
@@ -889,6 +1079,10 @@ class MainWindow(QtWidgets.QMainWindow):
         layout.addWidget(window_group_box, 1, 0, 1, 5)
         layout.addWidget(steps_group_box, 2, 0, 3, 5)
 
+        # Resource usage group
+        layout.addWidget(self.resource_group, 5, 0, 1, 5)
+        layout.setRowStretch(5, 0)  # Resource group should not stretch vertically
+
         # Start/State row in a group
         start_state_group = QtWidgets.QGroupBox()
         start_state_group.setTitle("")
@@ -899,8 +1093,8 @@ class MainWindow(QtWidgets.QMainWindow):
         start_state_layout.addWidget(self.state_label)
         start_state_layout.addStretch(1)
         start_state_group.setLayout(start_state_layout)
-        layout.addWidget(start_state_group, 5, 0, 1, 5)
-        layout.setRowStretch(5, 0)  # Prevent vertical stretch
+        layout.addWidget(start_state_group, 6, 0, 1, 5)
+        layout.setRowStretch(6, 0)  # Prevent vertical stretch
 
         # Set central widget (must be at the end of init_ui)
         central = QtWidgets.QWidget()
