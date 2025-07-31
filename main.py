@@ -893,8 +893,16 @@ class SettingsDialog(QtWidgets.QDialog):
                     background-color: {colors['border']};
                 }}
             """)
+            
+            # Force immediate visual update for initial theme
+            self.update()
+            self.repaint()
         
         self.init_ui()
+        
+        # Apply theme to all child widgets after UI initialization
+        if parent:
+            QtCore.QTimer.singleShot(0, self.apply_theme_to_all_widgets)
     
     def init_ui(self):
         """Initialize the settings dialog UI."""
@@ -1011,13 +1019,104 @@ class SettingsDialog(QtWidgets.QDialog):
         layout.addLayout(button_layout)
         self.setLayout(layout)
     
+    def apply_theme_to_all_widgets(self):
+        """Apply theme to all child widgets to ensure consistency."""
+        if not self.parent_window:
+            return
+            
+        # Force update all child widgets
+        for widget in self.findChildren(QtWidgets.QWidget):
+            widget.update()
+        
+        # Force layout updates
+        if self.layout():
+            self.layout().update()
+        
+        # Process all events to ensure immediate visual update
+        QtWidgets.QApplication.processEvents()
+    
     def on_theme_changed(self, theme_text):
         """Handle theme change from settings dialog."""
         if self.parent_window:
             self.parent_window.on_theme_changed(theme_text)
-            # Update the dialog's theme immediately
+            # Update the dialog's theme immediately with new colors
             colors = self.parent_window.get_theme_styles()
-            self.setStyleSheet(self.styleSheet())  # Re-apply stylesheet with new colors
+            self.setStyleSheet(f"""
+                QDialog {{
+                    background-color: {colors['background']};
+                    color: {colors['foreground']};
+                }}
+                QGroupBox {{
+                    font-size: 9pt;
+                    font-weight: bold;
+                    border: 1px solid {colors['border']};
+                    border-radius: 5px;
+                    margin-top: 10px;
+                    padding-top: 5px;
+                    color: {colors['foreground']};
+                }}
+                QGroupBox::title {{
+                    subcontrol-origin: margin;
+                    left: 10px;
+                    padding: 0 5px 0 5px;
+                    color: {colors['foreground']};
+                }}
+                QLabel {{
+                    font-size: 9pt;
+                    color: {colors['foreground']};
+                }}
+                QComboBox {{
+                    font-size: 9pt;
+                    min-height: 20px;
+                    padding: 2px 6px;
+                    min-width: 90px;
+                    background-color: {colors['input_bg']};
+                    border: 1px solid {colors['border']};
+                    border-radius: 3px;
+                    color: {colors['foreground']};
+                }}
+                QComboBox::drop-down {{
+                    border: none;
+                    width: 20px;
+                    subcontrol-origin: padding;
+                    subcontrol-position: center right;
+                }}
+                QComboBox::down-arrow {{
+                    image: none;
+                    width: 0;
+                    height: 0;
+                    border-left: 5px solid transparent;
+                    border-right: 5px solid transparent;
+                    border-top: 6px solid {colors['foreground']};
+                    margin: 0px;
+                }}
+                QPushButton {{
+                    font-size: 9pt;
+                    min-height: 20px;
+                    padding: 2px 4px;
+                    min-width: 70px;
+                    background-color: {colors['button_bg']};
+                    border: 1px solid {colors['border']};
+                    border-radius: 3px;
+                    color: {colors['foreground']};
+                }}
+                QPushButton:hover {{
+                    background-color: {colors['button_hover']};
+                }}
+                QPushButton:pressed {{
+                    background-color: {colors['border']};
+                }}
+            """)
+            
+            # Force immediate visual update
+            self.update()
+            self.repaint()
+            
+            # Process all pending events to ensure immediate application
+            QtWidgets.QApplication.processEvents()
+            
+            # Apply theme to all child widgets
+            self.apply_theme_to_all_widgets()
     
     def on_logging_level_changed(self, level_text):
         """Handle logging level change from settings dialog."""
@@ -1748,7 +1847,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 current_mb, max_mb, avg_mb = self._get_resource_stats(self._resource_history['memory_mb'])
                 current_pct, max_pct, avg_pct = self._get_resource_stats(self._resource_history['memory_percent'])
                 
-                memory_text = f"Memory: {current_mb:.1f}MB ({current_pct:.1f}%)\nMax: {max_mb:.1f}MB ({max_pct:.1f}%) | Avg: {avg_mb:.1f}MB ({avg_pct:.1f}%)"
+                memory_text = f"Memory: {current_mb:.1f}MB ({current_pct:.1f}%)\nAvg: {avg_mb:.1f}MB ({avg_pct:.1f}%) | Max: {max_mb:.1f}MB ({max_pct:.1f}%)"
                 memory_color = colors['error'] if current_pct > 10 else colors['success']
             else:
                 memory_text = "Memory: N/A (psutil needed)\nInstall psutil for detailed monitoring"
@@ -1766,7 +1865,7 @@ class MainWindow(QtWidgets.QMainWindow):
             if memory_info.get('has_psutil', False):
                 current_cpu, max_cpu, avg_cpu = self._get_resource_stats(self._resource_history['cpu_percent'])
                 
-                cpu_text = f"CPU: {current_cpu:.1f}%\nMax: {max_cpu:.1f}% | Avg: {avg_cpu:.1f}%"
+                cpu_text = f"CPU: {current_cpu:.1f}%\nAvg: {avg_cpu:.1f}% | Max: {max_cpu:.1f}%"
                 cpu_color = colors['error'] if current_cpu > 50 else colors['success']
             else:
                 cpu_text = "CPU: N/A\nInstall psutil for monitoring"
@@ -1779,7 +1878,7 @@ class MainWindow(QtWidgets.QMainWindow):
             if memory_info.get('has_psutil', False):
                 current_sys, max_sys, avg_sys = self._get_resource_stats(self._resource_history['system_memory_percent'])
                 
-                system_text = f"System: {current_sys:.1f}% ({memory_info['system_memory_available_gb']:.1f}GB free)\nMax: {max_sys:.1f}% | Avg: {avg_sys:.1f}%"
+                system_text = f"System: {current_sys:.1f}% ({memory_info['system_memory_available_gb']:.1f}GB free)\nAvg: {avg_sys:.1f}% | Max: {max_sys:.1f}%"
                 system_color = colors['error'] if current_sys > 85 else colors['success']
             else:
                 system_text = "System: N/A\nInstall psutil for monitoring"
@@ -1807,7 +1906,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 current_gpu, max_gpu, avg_gpu = self._get_resource_stats(self._resource_history['gpu_utilization'])
                 
                 if gpu_total_mb > 0:
-                    gpu_text = f"GPU: {gpu_used_mb:.0f}/{gpu_total_mb:.0f}MB ({current_gpu:.1f}%)\nMax: {max_gpu:.1f}% | Avg: {avg_gpu:.1f}%"
+                    gpu_text = f"GPU: {gpu_used_mb:.0f}/{gpu_total_mb:.0f}MB ({current_gpu:.1f}%)\nAvg: {avg_gpu:.1f}% | Max: {max_gpu:.1f}%"
                     gpu_color = colors['error'] if current_gpu > 80 else colors['warning'] if current_gpu > 60 else colors['success']
                     
                     # Add GPU name as tooltip
@@ -1851,7 +1950,7 @@ class MainWindow(QtWidgets.QMainWindow):
             if hasattr(self, '_loop_times') and self._loop_times:
                 current_loop, max_loop, avg_loop = self._get_resource_stats(self._resource_history['loop_times'])
                 
-                perf_text = f"Performance: {current_loop:.0f}ms loop time\nMax: {max_loop:.0f}ms | Avg: {avg_loop:.0f}ms"
+                perf_text = f"Performance: {current_loop:.0f}ms loop time\nAvg: {avg_loop:.0f}ms | Max: {max_loop:.0f}ms"
                 perf_color = colors['error'] if current_loop > 500 else colors['success']
             else:
                 perf_text = "Performance: Not running\nStart automation to see metrics"
@@ -2467,22 +2566,6 @@ class MainWindow(QtWidgets.QMainWindow):
                 font-size: 9pt;
                 min-height: 20px;
                 padding: 2px 6px;
-                min-width: 70px;
-                background-color: {colors['button_bg']};
-                border: 1px solid {colors['border']};
-                border-radius: 3px;
-                color: {colors['foreground']};
-            }}
-            QPushButton:hover {{
-                background-color: {colors['button_hover']};
-            }}
-            QPushButton:pressed {{
-                background-color: {colors['border']};
-            }}
-            QComboBox {{
-                font-size: 9pt;
-                min-height: 20px;
-                padding: 2px 6px;
                 min-width: 90px;
                 background-color: {colors['input_bg']};
                 border: 1px solid {colors['border']};
@@ -2763,10 +2846,10 @@ class MainWindow(QtWidgets.QMainWindow):
         scenario_btn_group_layout.setSpacing(4)
         scenario_btn_group_layout.setContentsMargins(4, 4, 4, 4)
         scenario_btn_group_layout.addWidget(self.btn_new)
-        scenario_btn_group_layout.addWidget(self.btn_import)
-        scenario_btn_group_layout.addWidget(self.btn_export)
         scenario_btn_group_layout.addWidget(self.btn_rename_scenario)
         scenario_btn_group_layout.addWidget(self.btn_delete_scenario)
+        scenario_btn_group_layout.addWidget(self.btn_import)
+        scenario_btn_group_layout.addWidget(self.btn_export)
         scenario_group_layout.addLayout(scenario_btn_group_layout)
         scenario_group_box.setLayout(scenario_group_layout)
 
@@ -2810,8 +2893,8 @@ class MainWindow(QtWidgets.QMainWindow):
         step_btn_group_layout.setContentsMargins(2, 2, 2, 2)  # Reduced margins
         step_btn_group_layout.addWidget(self.btn_add_step)
         step_btn_group_layout.addWidget(self.btn_edit_step)
-        step_btn_group_layout.addWidget(self.btn_del_step)
         step_btn_group_layout.addWidget(self.btn_rename_step)
+        step_btn_group_layout.addWidget(self.btn_del_step)
         step_btn_group_layout.addWidget(self.btn_move_up_step)
         step_btn_group_layout.addWidget(self.btn_move_down_step)
         steps_group_layout.addLayout(step_btn_group_layout)
