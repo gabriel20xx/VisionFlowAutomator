@@ -5,3 +5,4 @@ pynput
 pygetwindow
 numpy
 Pillow
+psutil  # Optional: For enhanced resource monitoring

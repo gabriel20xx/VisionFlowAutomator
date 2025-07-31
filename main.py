@@ -6,6 +6,9 @@ import time
 import logging
 import zipfile
 import shutil
+import gc
+import weakref
+from functools import lru_cache
 from PyQt6 import QtWidgets, QtGui, QtCore
 import cv2
 import pygetwindow as gw
@@ -15,28 +18,82 @@ from pynput import keyboard
 import tkinter as tk
 from PIL import ImageGrab, Image, ImageTk
 
-# Disable the PyAutoGUI fail-safe feature.
+# Disable the PyAutoGUI fail-safe feature and optimize settings
 pyautogui.FAILSAFE = False
+pyautogui.PAUSE = 0.01  # Reduce pause between actions
+pyautogui.MINIMUM_DURATION = 0  # Remove minimum duration for faster execution
 
 # Setup logs directory
 LOGS_DIR = 'logs'
 if not os.path.exists(LOGS_DIR):
     os.makedirs(LOGS_DIR)
 
-# Setup logging
+# Setup logging with optimized settings
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.INFO,  # Changed from DEBUG to reduce log volume
     format='[%(asctime)s] %(levelname)s: %(message)s',
     handlers=[
         logging.FileHandler(os.path.join(LOGS_DIR, 'scenario_automation.log'), encoding='utf-8'),
         logging.StreamHandler()
     ]
 )
+
+# Create a more efficient logger for performance-critical sections
+perf_logger = logging.getLogger('performance')
+perf_logger.setLevel(logging.WARNING)  # Only log warnings and errors for performance
+
 logger = logging.getLogger(__name__)
 
 CONFIG_DIR = 'scenarios'
 if not os.path.exists(CONFIG_DIR):
     os.makedirs(CONFIG_DIR)
+
+class TemplateCache:
+    """
+    Cache for template images to avoid reloading them repeatedly.
+    Uses weak references to allow garbage collection when templates are no longer needed.
+    """
+    def __init__(self, max_size=50):
+        self._cache = {}
+        self._max_size = max_size
+        self._access_times = {}
+    
+    def get_template(self, path, force_reload=False):
+        """Get template image from cache or load it."""
+        if force_reload or path not in self._cache:
+            if len(self._cache) >= self._max_size:
+                self._cleanup_old_entries()
+            
+            template = cv2.imread(path)
+            if template is not None:
+                self._cache[path] = template
+                self._access_times[path] = time.time()
+            return template
+        else:
+            self._access_times[path] = time.time()
+            return self._cache[path]
+    
+    def _cleanup_old_entries(self):
+        """Remove least recently used entries."""
+        if not self._access_times:
+            return
+        
+        # Remove oldest 25% of entries
+        sorted_entries = sorted(self._access_times.items(), key=lambda x: x[1])
+        entries_to_remove = len(sorted_entries) // 4
+        
+        for path, _ in sorted_entries[:entries_to_remove]:
+            self._cache.pop(path, None)
+            self._access_times.pop(path, None)
+    
+    def clear(self):
+        """Clear all cached templates."""
+        self._cache.clear()
+        self._access_times.clear()
+        gc.collect()
+
+# Global template cache instance
+template_cache = TemplateCache()
 
 class Scenario:
     """
@@ -109,63 +166,99 @@ class Scenario:
 def take_screenshot_with_tkinter():
     """
     Use Tkinter to let the user select a region of the screen for a screenshot.
-    The screen is not frozen.
+    Optimized for better performance and memory usage.
     Returns a dict with x, y, width, height, or None.
     """
     root = tk.Tk()
     root.attributes("-alpha", 0.3)
     root.attributes("-fullscreen", True)
+    root.attributes("-topmost", True)  # Ensure window stays on top
     root.wait_visibility(root)
     
-    canvas = tk.Canvas(root, cursor="cross")
+    # Configure for better performance
+    root.resizable(False, False)
+    root.overrideredirect(True)
+    
+    canvas = tk.Canvas(root, cursor="cross", highlightthickness=0)
     canvas.pack(fill="both", expand=True)
 
     rect = None
     start_x = None
     start_y = None
-    
     selection_rect = None
+    
+    # Add instructions
+    instruction_text = canvas.create_text(
+        root.winfo_screenwidth() // 2, 50, 
+        text="Click and drag to select area. Press ESC to cancel.", 
+        fill="white", font=("Arial", 14)
+    )
 
     def on_button_press(event):
         nonlocal start_x, start_y, rect
         start_x = event.x
         start_y = event.y
+        # Remove instruction text
+        canvas.delete(instruction_text)
         rect = canvas.create_rectangle(start_x, start_y, start_x, start_y, outline='red', width=2)
 
     def on_mouse_drag(event):
         nonlocal rect
-        cur_x, cur_y = (event.x, event.y)
-        canvas.coords(rect, start_x, start_y, cur_x, cur_y)
+        if rect and start_x is not None and start_y is not None:
+            cur_x, cur_y = event.x, event.y
+            canvas.coords(rect, start_x, start_y, cur_x, cur_y)
 
     def on_button_release(event):
         nonlocal selection_rect
-        end_x, end_y = (event.x, event.y)
-        
-        x1 = min(start_x, end_x)
-        y1 = min(start_y, end_y)
-        x2 = max(start_x, end_x)
-        y2 = max(start_y, end_y)
+        if start_x is not None and start_y is not None:
+            end_x, end_y = event.x, event.y
+            
+            x1 = min(start_x, end_x)
+            y1 = min(start_y, end_y)
+            x2 = max(start_x, end_x)
+            y2 = max(start_y, end_y)
 
-        width = x2 - x1
-        height = y2 - y1
+            width = x2 - x1
+            height = y2 - y1
 
-        if width > 0 and height > 0:
-            selection_rect = {"x": x1, "y": y1, "width": width, "height": height}
+            # Minimum size validation
+            if width > 10 and height > 10:
+                selection_rect = {"x": x1, "y": y1, "width": width, "height": height}
+            else:
+                selection_rect = None
         
         root.quit()
-
-    canvas.bind("<ButtonPress-1>", on_button_press)
-    canvas.bind("<B1-Motion>", on_mouse_drag)
-    canvas.bind("<ButtonRelease-1>", on_button_release)
 
     def on_escape(event):
         nonlocal selection_rect
         selection_rect = None
         root.quit()
-    root.bind("<Escape>", on_escape)
+    
+    def on_key_press(event):
+        if event.keysym == 'Escape':
+            on_escape(event)
 
-    root.mainloop()
-    root.destroy()
+    # Bind events
+    canvas.bind("<ButtonPress-1>", on_button_press)
+    canvas.bind("<B1-Motion>", on_mouse_drag)
+    canvas.bind("<ButtonRelease-1>", on_button_release)
+    root.bind("<Escape>", on_escape)
+    root.bind("<KeyPress>", on_key_press)
+    
+    # Focus the window to receive key events
+    root.focus_set()
+    root.focus_force()
+
+    try:
+        root.mainloop()
+    except Exception as e:
+        logger.error(f"Error in screenshot selection: {e}")
+        selection_rect = None
+    finally:
+        try:
+            root.destroy()
+        except Exception as e:
+            logger.warning(f"Error destroying tkinter window: {e}")
     
     return selection_rect
 
@@ -176,82 +269,231 @@ class MainWindow(QtWidgets.QMainWindow):
     """
     def automation_loop(self):
         """
-        Main loop for running automation steps. Continuously looks for image matches
-        in the selected window or screen and performs actions as defined in the scenario.
+        Optimized automation loop with memory management and performance improvements.
         """
         logger.info('Automation loop started.')
+        frame_count = 0
+        last_gc_time = time.time()
+        
         try:
             while self.running:
-                # Only update the state label, do not log every loop
-                self.set_state('Looking for matches')
-                selected_window = self.window_combo.currentText()
-                if selected_window == 'Entire Screen':
-                    screen = pyautogui.screenshot()
-                    offset_x, offset_y = 0, 0
-                else:
-                    try:
-                        win = None
-                        for w in gw.getAllWindows():
-                            if w.title == selected_window:
-                                win = w
-                                break
-                        if win is not None and win.width > 0 and win.height > 0:
-                            x, y, w_, h_ = win.left, win.top, win.width, win.height
-                            screen = pyautogui.screenshot(region=(x, y, w_, h_))
-                            offset_x, offset_y = x, y
-                        else:
-                            screen = pyautogui.screenshot()
-                            offset_x, offset_y = 0, 0
-                    except Exception as e:
-                        logger.error(f'Error capturing window screenshot: {e}')
-                        screen = pyautogui.screenshot()
-                        offset_x, offset_y = 0, 0
-                screen_np = cv2.cvtColor(np.array(screen), cv2.COLOR_RGB2BGR)
-                for step in self.current_scenario.steps:
-                    # Detect all images for this step
-                    detections = {}
-                    for img in step.get('images', []):
-                        try:
-                            template = cv2.imread(img['path'])
-                            if template is None:
-                                logger.warning(f"Could not load template image: {img['path']}")
-                                continue
-                            res = cv2.matchTemplate(screen_np, template, cv2.TM_CCOEFF_NORMED)
-                            min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
-                            # logger.debug(f"Detection for {img['name']}: max_val={max_val}")  # Suppressed per request
-                            sensitivity = img.get('sensitivity', 0.9)
-                            if max_val > sensitivity:
-                                # Adjust detected location to be relative to the full screen
-                                abs_loc = (max_loc[0] + offset_x, max_loc[1] + offset_y)
-                                detections[img['name']] = (abs_loc, template.shape)
-                        except Exception as e:
-                            logger.error(f"Error in image detection for {img['name']}: {e}")
-                    # Check condition
-                    cond = step.get('condition', 'OR')
-                    found = [img for img in step.get('images', []) if img.get('name') in detections]
-                    trigger = False
-                    if not step.get('images', []):
-                        trigger = False
-                    elif cond == 'AND':
-                        trigger = len(found) == len(step.get('images', []))
-                    else:
-                        trigger = len(found) > 0
-                    # logger.debug(f"Step '{step.get('name', 'step')}' trigger check: found={found}, cond={cond}, trigger={trigger}")  # Suppressed per request
-                    if trigger:
-                        self.set_state(f'Performing step: {step.get("name", "step")})')
-                        logger.info(f"Found match for step: {step.get('name', 'step')}. Performing actions.")
-                        # Use the first detected image for position
-                        ref_img = found[0] if found else step.get('images', [])[0]
-                        loc, shape = detections.get(ref_img.get('name'), ((0, 0), (0, 0, 0)))
-                        for act in step.get('actions', []):
-                            self._perform_step_action(act, loc, shape)
-                        logger.info(f"Performed actions for step: {step.get('name', 'step')}")
-                        time.sleep(1)  # Prevent spamming
-                time.sleep(0.2)
+                loop_start_time = time.time()
+                
+                # Only update the state label periodically to reduce UI overhead
+                if frame_count % 10 == 0:
+                    self.set_state('Looking for matches')
+                
+                # Get optimized screenshot
+                screen_data = self._get_optimized_screenshot()
+                if screen_data is None:
+                    time.sleep(0.1)
+                    continue
+                
+                screen_np, offset_x, offset_y = screen_data
+                
+                # Process steps with priority and cooldown system
+                step_executed = False
+                current_time = time.time()
+                
+                for step_idx, step in enumerate(self.current_scenario.steps):
+                    # Check step cooldown to prevent spam
+                    step_name = step.get('name', f'step_{step_idx}')
+                    if step_name in self._step_cooldown:
+                        if current_time - self._step_cooldown[step_name] < 1.0:
+                            continue
+                    
+                    # Process step images with cache
+                    detections = self._process_step_images(step, screen_np, offset_x, offset_y)
+                    
+                    # Check trigger condition
+                    if self._check_step_trigger(step, detections):
+                        self._processing_step = True
+                        self.set_state(f'Performing step: {step_name}')
+                        logger.info(f"Executing step: {step_name}")
+                        
+                        # Execute step actions
+                        success = self._execute_step_actions(step, detections)
+                        
+                        if success:
+                            self._step_cooldown[step_name] = current_time
+                            step_executed = True
+                            
+                        self._processing_step = False
+                        break  # Execute only one step per loop iteration
+                
+                # Performance monitoring
+                loop_time = time.time() - loop_start_time
+                self._update_performance_stats(loop_time)
+                
+                # Periodic cleanup
+                frame_count += 1
+                if frame_count % 100 == 0:  # Every 100 frames
+                    self._periodic_cleanup()
+                
+                # Dynamic sleep based on performance
+                sleep_time = max(0.05, 0.2 - loop_time) if not step_executed else 0.1
+                time.sleep(sleep_time)
+                
         except Exception as e:
             logger.error(f'Automation loop error: {e}')
         finally:
+            self._processing_step = False
             self.set_state('Paused')
+            logger.info('Automation loop ended.')
+    
+    def _get_optimized_screenshot(self):
+        """
+        Get screenshot with caching to reduce memory allocation.
+        """
+        current_time = time.time()
+        
+        # Use cached screenshot if recent enough and not processing
+        if (self._last_screenshot is not None and 
+            not self._processing_step and
+            current_time - self._last_screenshot_time < self._screenshot_cache_duration):
+            return self._last_screenshot
+        
+        try:
+            selected_window = self.window_combo.currentText()
+            if selected_window == 'Entire Screen':
+                screen = pyautogui.screenshot()
+                offset_x, offset_y = 0, 0
+            else:
+                # Try to get specific window
+                win = None
+                for w in gw.getAllWindows():
+                    if w.title == selected_window:
+                        win = w
+                        break
+                
+                if win is not None and win.width > 0 and win.height > 0:
+                    x, y, w_, h_ = win.left, win.top, win.width, win.height
+                    # Validate window bounds
+                    if x >= 0 and y >= 0 and w_ > 0 and h_ > 0:
+                        screen = pyautogui.screenshot(region=(x, y, w_, h_))
+                        offset_x, offset_y = x, y
+                    else:
+                        screen = pyautogui.screenshot()
+                        offset_x, offset_y = 0, 0
+                else:
+                    screen = pyautogui.screenshot()
+                    offset_x, offset_y = 0, 0
+            
+            # Convert to OpenCV format with optimized memory usage
+            screen_np = cv2.cvtColor(np.array(screen), cv2.COLOR_RGB2BGR)
+            
+            # Cache the result
+            screen_data = (screen_np, offset_x, offset_y)
+            self._last_screenshot = screen_data
+            self._last_screenshot_time = current_time
+            
+            # Clean up PIL image to free memory
+            del screen
+            
+            return screen_data
+            
+        except Exception as e:
+            logger.error(f'Error capturing screenshot: {e}')
+            return None
+    
+    def _process_step_images(self, step, screen_np, offset_x, offset_y):
+        """
+        Process step images with template caching.
+        """
+        detections = {}
+        
+        for img in step.get('images', []):
+            try:
+                # Use cached template
+                template = template_cache.get_template(img['path'])
+                if template is None:
+                    logger.warning(f"Could not load template image: {img['path']}")
+                    continue
+                
+                # Perform template matching with optimization
+                res = cv2.matchTemplate(screen_np, template, cv2.TM_CCOEFF_NORMED)
+                min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
+                
+                sensitivity = img.get('sensitivity', 0.9)
+                if max_val > sensitivity:
+                    # Adjust detected location to be relative to the full screen
+                    abs_loc = (max_loc[0] + offset_x, max_loc[1] + offset_y)
+                    detections[img['name']] = (abs_loc, template.shape, max_val)
+                
+                # Clean up OpenCV result to free memory
+                del res
+                
+            except Exception as e:
+                logger.error(f"Error in image detection for {img.get('name', 'unknown')}: {e}")
+        
+        return detections
+    
+    def _check_step_trigger(self, step, detections):
+        """
+        Check if step should be triggered based on detections.
+        """
+        step_images = step.get('images', [])
+        if not step_images:
+            return False
+        
+        found = [img for img in step_images if img.get('name') in detections]
+        condition = step.get('condition', 'OR')
+        
+        if condition == 'AND':
+            return len(found) == len(step_images)
+        else:  # OR condition
+            return len(found) > 0
+    
+    def _execute_step_actions(self, step, detections):
+        """
+        Execute step actions with error handling.
+        """
+        try:
+            found_images = [img for img in step.get('images', []) if img.get('name') in detections]
+            if found_images:
+                # Use the first detected image for position reference
+                ref_img = found_images[0]
+                loc, shape, confidence = detections.get(ref_img.get('name'), ((0, 0), (0, 0, 0), 0))
+                
+                for action in step.get('actions', []):
+                    self._perform_step_action(action, loc, shape)
+                
+                return True
+            
+        except Exception as e:
+            logger.error(f"Error executing step actions: {e}")
+        
+        return False
+    
+    def _update_performance_stats(self, loop_time):
+        """
+        Update performance statistics for monitoring.
+        """
+        self._loop_times.append(loop_time)
+        if len(self._loop_times) > self._max_loop_time_samples:
+            self._loop_times.pop(0)
+        
+        # Log performance warnings
+        avg_time = sum(self._loop_times) / len(self._loop_times)
+        if avg_time > 0.5:  # If average loop time exceeds 500ms
+            logger.warning(f"Performance warning: Average loop time: {avg_time:.3f}s")
+    
+    def _periodic_cleanup(self):
+        """
+        Perform periodic cleanup to prevent memory leaks.
+        """
+        # Clear old screenshot cache
+        self._last_screenshot = None
+        
+        # Clean up old step cooldowns (older than 5 minutes)
+        current_time = time.time()
+        old_cooldowns = [name for name, timestamp in self._step_cooldown.items() 
+                        if current_time - timestamp > 300]
+        for name in old_cooldowns:
+            del self._step_cooldown[name]
+        
+        # Force garbage collection
+        gc.collect()
 
     def _perform_step_action(self, action, loc, shape):
         """
@@ -319,32 +561,128 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def start_automation(self):
         """
-        Start the automation process and worker thread.
+        Start the automation process and worker thread with resource checks.
         """
         logger.info('Starting automation.')
         if not self.current_scenario or self.running:
             logger.warning('Start Automation: No scenario selected or already running.')
             return
+        
+        # Perform pre-start cleanup
+        self._last_screenshot = None
+        self._step_cooldown.clear()
+        gc.collect()
+        
+        # Initialize performance monitoring
+        self._loop_times.clear()
+        
+        # Start automation
         self.running = True
         self.set_state('Looking for matches')
         self.btn_start_stop.setText(f'Stop ({self.hotkey.upper()})')
+        
+        # Create and start worker thread
         self.worker = threading.Thread(target=self.automation_loop, daemon=True)
         self.worker.start()
-        self.listener = keyboard.GlobalHotKeys({self.hotkey: self.stop_automation})
-        self.listener.start()
+        
+        # Setup hotkey listener with error handling
+        try:
+            self.listener = keyboard.GlobalHotKeys({self.hotkey: self.stop_automation})
+            self.listener.start()
+        except Exception as e:
+            logger.error(f"Failed to setup hotkey listener: {e}")
+            # Continue without hotkey if setup fails
+        
+        logger.info('Automation started successfully.')
+    
+    def get_memory_usage(self):
+        """
+        Get current memory usage information for monitoring.
+        """
+        try:
+            import psutil
+            process = psutil.Process()
+            memory_info = process.memory_info()
+            cpu_percent = process.cpu_percent()
+            
+            # Get system info
+            system_memory = psutil.virtual_memory()
+            
+            return {
+                'process_memory_mb': memory_info.rss / 1024 / 1024,  # MB
+                'process_memory_percent': process.memory_percent(),
+                'cpu_percent': cpu_percent,
+                'system_memory_percent': system_memory.percent,
+                'system_memory_available_gb': system_memory.available / 1024 / 1024 / 1024,  # GB
+                'template_cache_size': len(template_cache._cache) if hasattr(template_cache, '_cache') else 0,
+                'cooldown_entries': len(self._step_cooldown) if hasattr(self, '_step_cooldown') else 0,
+                'has_psutil': True
+            }
+        except ImportError:
+            # psutil not available, return basic info
+            return {
+                'process_memory_mb': 0,
+                'process_memory_percent': 0,
+                'cpu_percent': 0,
+                'system_memory_percent': 0,
+                'system_memory_available_gb': 0,
+                'template_cache_size': len(template_cache._cache) if hasattr(template_cache, '_cache') else 0,
+                'cooldown_entries': len(self._step_cooldown) if hasattr(self, '_step_cooldown') else 0,
+                'has_psutil': False
+            }
+        except Exception as e:
+            logger.warning(f"Error getting memory usage: {e}")
+            return {
+                'process_memory_mb': 0,
+                'process_memory_percent': 0,
+                'cpu_percent': 0,
+                'system_memory_percent': 0,
+                'system_memory_available_gb': 0,
+                'template_cache_size': len(template_cache._cache) if hasattr(template_cache, '_cache') else 0,
+                'cooldown_entries': len(self._step_cooldown) if hasattr(self, '_step_cooldown') else 0,
+                'has_psutil': False,
+                'error': str(e)
+            }
 
     def stop_automation(self):
         """
-        Stop the automation process and worker thread.
+        Stop the automation process and worker thread with proper cleanup.
         """
         logger.info('Stopping automation.')
         self.running = False
         self.last_toggle_time = time.time()
         self.set_state('Paused')
         self.btn_start_stop.setText(f'Start ({self.hotkey.upper()})')
+        
+        # Stop global hotkey listener
         if self.listener:
-            self.listener.stop()
-            self.listener = None
+            try:
+                self.listener.stop()
+            except Exception as e:
+                logger.warning(f"Error stopping hotkey listener: {e}")
+            finally:
+                self.listener = None
+        
+        # Wait for worker thread to finish (with timeout)
+        if self.worker and self.worker.is_alive():
+            try:
+                self.worker.join(timeout=2.0)  # Wait up to 2 seconds
+                if self.worker.is_alive():
+                    logger.warning("Worker thread did not stop within timeout")
+            except Exception as e:
+                logger.warning(f"Error joining worker thread: {e}")
+            finally:
+                self.worker = None
+        
+        # Clear processing flags and cached data
+        self._processing_step = False
+        self._last_screenshot = None
+        self._step_cooldown.clear()
+        
+        # Force garbage collection to free memory
+        gc.collect()
+        
+        logger.info('Automation stopped and resources cleaned up.')
 
     def __init__(self):
         """
@@ -364,8 +702,207 @@ class MainWindow(QtWidgets.QMainWindow):
         self.current_scenario = None
         self.selected_step_idx = None
         self.last_toggle_time = 0  # For debounce of start/stop
+        
+        # Memory optimization attributes
+        self._last_screenshot = None
+        self._last_screenshot_time = 0
+        self._screenshot_cache_duration = 0.05  # Cache screenshot for 50ms
+        self._processing_step = False
+        self._step_cooldown = {}  # Cooldown tracking for steps
+        
+        # Performance monitoring
+        self._loop_times = []
+        self._max_loop_time_samples = 10
+        
         self.init_ui()
         self.load_scenarios()
+        
+        # Setup cleanup on close
+        self.setAttribute(QtCore.Qt.WidgetAttribute.WA_DeleteOnClose)
+        
+        # Setup periodic monitoring timer
+        self.monitor_timer = QtCore.QTimer()
+        self.monitor_timer.timeout.connect(self._monitor_performance)
+        self.monitor_timer.start(2000)  # Monitor every 2 seconds for responsive UI updates
+        
+        # Initial resource display update
+        QtCore.QTimer.singleShot(100, self._monitor_performance)
+    
+    def _monitor_performance(self):
+        """
+        Monitor application performance and memory usage.
+        """
+        try:
+            memory_info = self.get_memory_usage()
+            
+            # Update resource display
+            self._update_resource_display(memory_info)
+            
+            # Log performance stats periodically (only if running)
+            if self.running and hasattr(self, '_loop_times') and self._loop_times:
+                avg_loop_time = sum(self._loop_times) / len(self._loop_times)
+                
+                # Warning thresholds
+                if avg_loop_time > 1.0:
+                    logger.warning(f"Performance issue: Average loop time {avg_loop_time:.3f}s")
+                
+                # Memory warning for cache-based monitoring
+                if memory_info.get('template_cache_size', 0) > 20:
+                    logger.info(f"Template cache has {memory_info['template_cache_size']} entries")
+                
+        except Exception as e:
+            logger.debug(f"Performance monitoring error: {e}")
+    
+    def _update_resource_display(self, memory_info):
+        """
+        Update the resource usage display in the UI.
+        """
+        try:
+            # Memory usage
+            if memory_info.get('has_psutil', False):
+                memory_text = f"Memory: {memory_info['process_memory_mb']:.1f}MB ({memory_info['process_memory_percent']:.1f}%)"
+                memory_color = '#d9534f' if memory_info['process_memory_percent'] > 10 else '#5cb85c'
+            else:
+                memory_text = "Memory: N/A (psutil needed)"
+                memory_color = '#f0ad4e'
+            
+            self.memory_label.setText(memory_text)
+            self.memory_label.setStyleSheet(f'font-size: 9pt; color: {memory_color};')
+            
+            # Make memory label clickable to show psutil installation info
+            if not memory_info.get('has_psutil', False):
+                self.memory_label.mousePressEvent = lambda event: self._show_psutil_info()
+                self.memory_label.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCursor))
+            
+            # CPU usage
+            if memory_info.get('has_psutil', False):
+                cpu_text = f"CPU: {memory_info['cpu_percent']:.1f}%"
+                cpu_color = '#d9534f' if memory_info['cpu_percent'] > 50 else '#5cb85c'
+            else:
+                cpu_text = "CPU: N/A"
+                cpu_color = '#777'
+            
+            self.cpu_label.setText(cpu_text)
+            self.cpu_label.setStyleSheet(f'font-size: 9pt; color: {cpu_color};')
+            
+            # System memory
+            if memory_info.get('has_psutil', False):
+                system_text = f"System: {memory_info['system_memory_percent']:.1f}% ({memory_info['system_memory_available_gb']:.1f}GB free)"
+                system_color = '#d9534f' if memory_info['system_memory_percent'] > 85 else '#5cb85c'
+            else:
+                system_text = "System: N/A"
+                system_color = '#777'
+            
+            self.system_memory_label.setText(system_text)
+            self.system_memory_label.setStyleSheet(f'font-size: 9pt; color: {system_color};')
+            
+            # Cache info
+            cache_text = f"Cache: {memory_info['template_cache_size']} templates, {memory_info['cooldown_entries']} cooldowns"
+            cache_color = '#f0ad4e' if memory_info['template_cache_size'] > 20 else '#5bc0de'
+            
+            self.cache_label.setText(cache_text)
+            self.cache_label.setStyleSheet(f'font-size: 9pt; color: {cache_color};')
+            
+            # Performance info
+            if hasattr(self, '_loop_times') and self._loop_times:
+                avg_time = sum(self._loop_times) / len(self._loop_times)
+                perf_text = f"Performance: {avg_time*1000:.0f}ms avg loop time"
+                perf_color = '#d9534f' if avg_time > 0.5 else '#5cb85c'
+            else:
+                perf_text = "Performance: Not running"
+                perf_color = '#777'
+            
+            self.performance_label.setText(perf_text)
+            self.performance_label.setStyleSheet(f'font-size: 9pt; color: {perf_color};')
+            
+            # Show error if any
+            if 'error' in memory_info:
+                self.performance_label.setText(f"Error: {memory_info['error'][:50]}...")
+                self.performance_label.setStyleSheet('font-size: 9pt; color: #d9534f;')
+                
+        except Exception as e:
+            logger.debug(f"Error updating resource display: {e}")
+            # Show basic fallback info
+            self.memory_label.setText("Memory: Error")
+            self.cpu_label.setText("CPU: Error")
+            self.system_memory_label.setText("System: Error")
+            self.cache_label.setText("Cache: Error")
+            self.performance_label.setText(f"Display Error: {str(e)[:30]}...")
+    
+    def stop_monitoring(self):
+        """Stop performance monitoring timer."""
+        if hasattr(self, 'monitor_timer') and self.monitor_timer:
+            self.monitor_timer.stop()
+    
+    def _toggle_resource_display(self):
+        """Toggle the visibility of resource usage widgets."""
+        if self.resource_widgets_visible:
+            # Hide resource widgets
+            self.memory_label.hide()
+            self.cpu_label.hide()
+            self.system_memory_label.hide()
+            self.cache_label.hide()
+            self.performance_label.hide()
+            self.toggle_resources_btn.setText('Show Resources')
+            self.resource_widgets_visible = False
+        else:
+            # Show resource widgets
+            self.memory_label.show()
+            self.cpu_label.show()
+            self.system_memory_label.show()
+            self.cache_label.show()
+            self.performance_label.show()
+            self.toggle_resources_btn.setText('Hide Resources')
+            self.resource_widgets_visible = True
+    
+    def _show_psutil_info(self):
+        """Show information about installing psutil for enhanced monitoring."""
+        msg = QtWidgets.QMessageBox(self)
+        msg.setWindowTitle("Enhanced Resource Monitoring")
+        msg.setIcon(QtWidgets.QMessageBox.Icon.Information)
+        msg.setText("Install psutil for detailed resource monitoring")
+        msg.setInformativeText(
+            "For detailed CPU, memory, and system resource monitoring, install the psutil package:\n\n"
+            "pip install psutil\n\n"
+            "This will enable:\n"
+            "• Process memory usage in MB and percentage\n"
+            "• CPU usage percentage\n"
+            "• System memory statistics\n"
+            "• Available system memory\n\n"
+            "Without psutil, only basic cache information is shown."
+        )
+        msg.setStandardButtons(QtWidgets.QMessageBox.StandardButton.Ok)
+        msg.exec()
+    
+    def closeEvent(self, event):
+        """Handle application close event with proper cleanup."""
+        self.cleanup_resources()
+        event.accept()
+    
+    def cleanup_resources(self):
+        """Clean up resources to prevent memory leaks."""
+        if self.running:
+            self.stop_automation()
+        
+        # Stop monitoring timer
+        self.stop_monitoring()
+        
+        # Clear template cache
+        template_cache.clear()
+        
+        # Clear screenshot cache
+        self._last_screenshot = None
+        
+        # Clear performance tracking
+        if hasattr(self, '_loop_times'):
+            self._loop_times.clear()
+        if hasattr(self, '_step_cooldown'):
+            self._step_cooldown.clear()
+        
+        # Force garbage collection
+        gc.collect()
+        
+        logger.info("Resources cleaned up successfully")
 
     def init_ui(self):
         """
@@ -488,6 +1025,48 @@ class MainWindow(QtWidgets.QMainWindow):
         self.state_label.setStyleSheet('font-weight: bold; font-size: 11pt; color: #0055aa;')
         self.state_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignLeft | QtCore.Qt.AlignmentFlag.AlignVCenter)
 
+        # Resource usage display
+        self.resource_group = QtWidgets.QGroupBox('Resource Usage')
+        self.resource_group.setSizePolicy(QtWidgets.QSizePolicy.Policy.Preferred, QtWidgets.QSizePolicy.Policy.Fixed)
+        resource_layout = QtWidgets.QGridLayout()
+        resource_layout.setSpacing(4)
+        resource_layout.setContentsMargins(6, 6, 6, 6)
+
+        # Toggle button for resource display
+        self.toggle_resources_btn = QtWidgets.QPushButton('Hide Resources')
+        self.toggle_resources_btn.setMaximumWidth(100)
+        self.toggle_resources_btn.setToolTip('Toggle resource usage display. Install psutil for detailed system metrics.')
+        self.toggle_resources_btn.clicked.connect(self._toggle_resource_display)
+        resource_layout.addWidget(self.toggle_resources_btn, 0, 2, 1, 1)
+
+        # Memory usage
+        self.memory_label = QtWidgets.QLabel('Memory: --')
+        self.memory_label.setStyleSheet('font-size: 9pt; color: #333;')
+        resource_layout.addWidget(self.memory_label, 0, 0)
+
+        # CPU usage
+        self.cpu_label = QtWidgets.QLabel('CPU: --')
+        self.cpu_label.setStyleSheet('font-size: 9pt; color: #333;')
+        resource_layout.addWidget(self.cpu_label, 0, 1)
+
+        # System memory
+        self.system_memory_label = QtWidgets.QLabel('System: --')
+        self.system_memory_label.setStyleSheet('font-size: 9pt; color: #333;')
+        resource_layout.addWidget(self.system_memory_label, 1, 0)
+
+        # Cache info
+        self.cache_label = QtWidgets.QLabel('Cache: --')
+        self.cache_label.setStyleSheet('font-size: 9pt; color: #333;')
+        resource_layout.addWidget(self.cache_label, 1, 1)
+
+        # Performance info
+        self.performance_label = QtWidgets.QLabel('Performance: --')
+        self.performance_label.setStyleSheet('font-size: 9pt; color: #333;')
+        resource_layout.addWidget(self.performance_label, 2, 0, 1, 3)
+
+        self.resource_group.setLayout(resource_layout)
+        self.resource_widgets_visible = True
+
         # Main layout
         layout = QtWidgets.QGridLayout()
         layout.setHorizontalSpacing(6)
@@ -500,6 +1079,10 @@ class MainWindow(QtWidgets.QMainWindow):
         layout.addWidget(window_group_box, 1, 0, 1, 5)
         layout.addWidget(steps_group_box, 2, 0, 3, 5)
 
+        # Resource usage group
+        layout.addWidget(self.resource_group, 5, 0, 1, 5)
+        layout.setRowStretch(5, 0)  # Resource group should not stretch vertically
+
         # Start/State row in a group
         start_state_group = QtWidgets.QGroupBox()
         start_state_group.setTitle("")
@@ -510,8 +1093,8 @@ class MainWindow(QtWidgets.QMainWindow):
         start_state_layout.addWidget(self.state_label)
         start_state_layout.addStretch(1)
         start_state_group.setLayout(start_state_layout)
-        layout.addWidget(start_state_group, 5, 0, 1, 5)
-        layout.setRowStretch(5, 0)  # Prevent vertical stretch
+        layout.addWidget(start_state_group, 6, 0, 1, 5)
+        layout.setRowStretch(6, 0)  # Prevent vertical stretch
 
         # Set central widget (must be at the end of init_ui)
         central = QtWidgets.QWidget()
@@ -1208,6 +1791,7 @@ class StepDialog(QtWidgets.QDialog):
     def add_image_to_step(self):
         """
         Add a new image to the step by taking a screenshot and letting the user select a region.
+        Optimized for memory efficiency.
         """
         main_window = self.parent()
         step_name = self.name_edit.text()
@@ -1224,12 +1808,14 @@ class StepDialog(QtWidgets.QDialog):
         try:
             rect_coords = take_screenshot_with_tkinter()
             if rect_coords:
-                cropped_pil_image = ImageGrab.grab(bbox=(
+                # Use more memory-efficient screenshot capture
+                bbox = (
                     rect_coords['x'], 
                     rect_coords['y'], 
                     rect_coords['x'] + rect_coords['width'], 
                     rect_coords['y'] + rect_coords['height']
-                ))
+                )
+                cropped_pil_image = ImageGrab.grab(bbox=bbox)
             logger.debug("StepDialog.add_image_to_step: Screenshot selection finished.")
         except Exception as e:
             logger.error(f"StepDialog.add_image_to_step: Screenshot failed: {e}")
@@ -1239,42 +1825,95 @@ class StepDialog(QtWidgets.QDialog):
             main_window.show()
 
         if cropped_pil_image and rect_coords:
-            img_np = np.array(cropped_pil_image.convert('RGB'))
-            height, width, channel = img_np.shape
-            bytes_per_line = 3 * width
-            qimage = QtGui.QImage(img_np.data, width, height, bytes_per_line, QtGui.QImage.Format.Format_RGB888)
-            cropped_pixmap = QtGui.QPixmap.fromImage(qimage)
+            try:
+                # Convert PIL to QPixmap more efficiently
+                img_np = np.array(cropped_pil_image.convert('RGB'))
+                height, width, channel = img_np.shape
+                bytes_per_line = 3 * width
+                qimage = QtGui.QImage(img_np.data, width, height, bytes_per_line, QtGui.QImage.Format.Format_RGB888)
+                cropped_pixmap = QtGui.QPixmap.fromImage(qimage)
 
-            name_dialog = self.NameImageDialog(cropped_pixmap, self)
-            if name_dialog.exec():
-                name = name_dialog.get_name()
-                if name:
-                    scenario_dir = main_window.current_scenario.get_scenario_dir()
-                    step_images_dir = os.path.join(scenario_dir, "steps", step_name)
-                    if not os.path.exists(step_images_dir):
-                        os.makedirs(step_images_dir)
+                name_dialog = self.NameImageDialog(cropped_pixmap, self)
+                if name_dialog.exec():
+                    name = name_dialog.get_name()
+                    if name:
+                        scenario_dir = main_window.current_scenario.get_scenario_dir()
+                        step_images_dir = os.path.join(scenario_dir, "steps", step_name)
+                        if not os.path.exists(step_images_dir):
+                            os.makedirs(step_images_dir)
 
-                    safe_name = "".join(c for c in name if c.isalnum() or c in (' ', '_')).rstrip()
-                    path = os.path.join(step_images_dir, f'{safe_name}.png')
+                        safe_name = "".join(c for c in name if c.isalnum() or c in (' ', '_')).rstrip()
+                        path = os.path.join(step_images_dir, f'{safe_name}.png')
 
-                    if cropped_pixmap.save(path, "PNG"):
-                        logger.info(f"Screenshot saved to {path}")
-                        img_obj = {'path': path, 'region': [rect_coords['x'], rect_coords['y'], rect_coords['width'], rect_coords['height']], 'name': name, 'sensitivity': 0.9}
-                        self.images.append(img_obj)
-                        self.img_list.addItem(name)
-                    else:
-                        logger.error(f"Failed to save screenshot to {path}")
-                        QtWidgets.QMessageBox.critical(self, 'Error', 'Failed to save the screenshot file.')
+                        # Save with PNG optimization
+                        if cropped_pixmap.save(path, "PNG", quality=90):
+                            logger.info(f"Screenshot saved to {path}")
+                            img_obj = {
+                                'path': path, 
+                                'region': [rect_coords['x'], rect_coords['y'], rect_coords['width'], rect_coords['height']], 
+                                'name': name, 
+                                'sensitivity': 0.9
+                            }
+                            self.images.append(img_obj)
+                            self.img_list.addItem(name)
+                        else:
+                            logger.error(f"Failed to save screenshot to {path}")
+                            QtWidgets.QMessageBox.critical(self, 'Error', 'Failed to save the screenshot file.')
+                
+                # Clean up memory
+                del img_np, qimage, cropped_pixmap
+                
+            finally:
+                # Ensure PIL image is cleaned up
+                if cropped_pil_image:
+                    cropped_pil_image.close()
+                    del cropped_pil_image
+                gc.collect()
 
     def update_image_preview(self, current, previous):
         """
         Update the image preview label when a new image is selected.
+        Optimized to prevent memory leaks from large pixmaps.
         """
+        # Clear previous pixmap to free memory
+        if previous:
+            self.img_preview.clear()
+        
         if current:
-            idx = self.img_list.row(current)
-            path = self.images[idx]['path']
-            pixmap = QtGui.QPixmap(path)
-            self.img_preview.setPixmap(pixmap.scaled(self.img_preview.size(), QtCore.Qt.AspectRatioMode.KeepAspectRatio, QtCore.Qt.TransformationMode.SmoothTransformation))
+            try:
+                idx = self.img_list.row(current)
+                if idx < 0 or idx >= len(self.images):
+                    self.img_preview.setText('Image Preview')
+                    return
+                
+                path = self.images[idx]['path']
+                if not os.path.exists(path):
+                    self.img_preview.setText('Image Not Found')
+                    return
+                
+                # Load and scale image efficiently
+                pixmap = QtGui.QPixmap(path)
+                if pixmap.isNull():
+                    self.img_preview.setText('Invalid Image')
+                    return
+                
+                # Scale with memory optimization
+                preview_size = self.img_preview.size()
+                if pixmap.width() > preview_size.width() or pixmap.height() > preview_size.height():
+                    scaled_pixmap = pixmap.scaled(
+                        preview_size, 
+                        QtCore.Qt.AspectRatioMode.KeepAspectRatio, 
+                        QtCore.Qt.TransformationMode.SmoothTransformation
+                    )
+                    self.img_preview.setPixmap(scaled_pixmap)
+                    # Clear original large pixmap
+                    del pixmap
+                else:
+                    self.img_preview.setPixmap(pixmap)
+                    
+            except Exception as e:
+                logger.error(f"Error updating image preview: {e}")
+                self.img_preview.setText('Preview Error')
         else:
             self.img_preview.setText('Image Preview')
 
