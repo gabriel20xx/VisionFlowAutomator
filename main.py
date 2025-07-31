@@ -713,9 +713,14 @@ class MainWindow(QtWidgets.QMainWindow):
         # Performance monitoring
         self._loop_times = []
         self._max_loop_time_samples = 10
+        self._last_warning_messages = {}  # Track last warning messages to prevent duplicates
+        self._warning_cooldown = 30  # Seconds between duplicate warnings
         
         self.init_ui()
         self.load_scenarios()
+        
+        # Restore window geometry (size and position)
+        self._restore_window_geometry()
         
         # Setup cleanup on close
         self.setAttribute(QtCore.Qt.WidgetAttribute.WA_DeleteOnClose)
@@ -742,16 +747,47 @@ class MainWindow(QtWidgets.QMainWindow):
             if self.running and hasattr(self, '_loop_times') and self._loop_times:
                 avg_loop_time = sum(self._loop_times) / len(self._loop_times)
                 
-                # Warning thresholds
+                # Warning thresholds with duplicate prevention
                 if avg_loop_time > 1.0:
-                    logger.warning(f"Performance issue: Average loop time {avg_loop_time:.3f}s")
+                    warning_msg = f"Performance issue: Average loop time {avg_loop_time:.3f}s"
+                    self._log_warning_once("performance_slow", warning_msg)
                 
                 # Memory warning for cache-based monitoring
                 if memory_info.get('template_cache_size', 0) > 20:
-                    logger.info(f"Template cache has {memory_info['template_cache_size']} entries")
+                    cache_msg = f"Template cache has {memory_info['template_cache_size']} entries"
+                    self._log_warning_once("cache_large", cache_msg)
+                
+                # High memory usage warning
+                if memory_info.get('process_memory_percent', 0) > 15:
+                    memory_msg = f"High memory usage: {memory_info['process_memory_percent']:.1f}% of system memory"
+                    self._log_warning_once("memory_high", memory_msg)
+                
+                # High CPU usage warning
+                if memory_info.get('cpu_percent', 0) > 70:
+                    cpu_msg = f"High CPU usage: {memory_info['cpu_percent']:.1f}%"
+                    self._log_warning_once("cpu_high", cpu_msg)
                 
         except Exception as e:
             logger.debug(f"Performance monitoring error: {e}")
+    
+    def _log_warning_once(self, warning_type, message):
+        """
+        Log a warning message only once per cooldown period to prevent spam.
+        """
+        current_time = time.time()
+        
+        # Check if we've already logged this type of warning recently
+        if warning_type in self._last_warning_messages:
+            last_time, last_message = self._last_warning_messages[warning_type]
+            
+            # If the message is the same and within cooldown period, skip
+            if (current_time - last_time < self._warning_cooldown and 
+                message == last_message):
+                return
+        
+        # Log the warning and update tracking
+        logger.warning(message)
+        self._last_warning_messages[warning_type] = (current_time, message)
     
     def _update_resource_display(self, memory_info):
         """
@@ -874,8 +910,124 @@ class MainWindow(QtWidgets.QMainWindow):
         msg.setStandardButtons(QtWidgets.QMessageBox.StandardButton.Ok)
         msg.exec()
     
+    def _save_window_geometry(self):
+        """Save the current window size and position to a config file."""
+        try:
+            config_path = os.path.join(CONFIG_DIR, 'window_config.json')
+            geometry_data = {
+                'x': self.x(),
+                'y': self.y(),
+                'width': self.width(),
+                'height': self.height(),
+                'maximized': self.isMaximized()
+            }
+            
+            # Load existing config if it exists
+            existing_config = {}
+            if os.path.exists(config_path):
+                try:
+                    with open(config_path, 'r') as f:
+                        existing_config = json.load(f)
+                except (json.JSONDecodeError, IOError):
+                    existing_config = {}
+            
+            # Update with window geometry
+            existing_config['main_window'] = geometry_data
+            
+            with open(config_path, 'w') as f:
+                json.dump(existing_config, f, indent=2)
+            
+            logger.debug(f"Saved window geometry: {geometry_data}")
+            
+        except Exception as e:
+            logger.debug(f"Error saving window geometry: {e}")
+    
+    def _restore_window_geometry(self):
+        """Restore the window size and position from config file."""
+        try:
+            config_path = os.path.join(CONFIG_DIR, 'window_config.json')
+            
+            if not os.path.exists(config_path):
+                logger.debug("No window config file found, using default geometry")
+                return
+            
+            with open(config_path, 'r') as f:
+                config = json.load(f)
+            
+            geometry_data = config.get('main_window')
+            if not geometry_data:
+                logger.debug("No main window geometry data found")
+                return
+            
+            # Validate geometry data
+            required_keys = ['x', 'y', 'width', 'height']
+            if not all(key in geometry_data for key in required_keys):
+                logger.debug("Incomplete geometry data, using defaults")
+                return
+            
+            # Get screen dimensions to validate position
+            screen = QtWidgets.QApplication.primaryScreen().geometry()
+            screen_width = screen.width()
+            screen_height = screen.height()
+            
+            # Validate and adjust position if necessary
+            x = max(0, min(geometry_data['x'], screen_width - 100))  # Ensure at least 100px visible
+            y = max(0, min(geometry_data['y'], screen_height - 100))
+            width = max(640, min(geometry_data['width'], screen_width))  # Minimum 640px wide
+            height = max(480, min(geometry_data['height'], screen_height))  # Minimum 480px tall
+            
+            # Apply geometry
+            self.setGeometry(x, y, width, height)
+            
+            # Restore maximized state if applicable
+            if geometry_data.get('maximized', False):
+                self.showMaximized()
+            
+            logger.debug(f"Restored window geometry: x={x}, y={y}, w={width}, h={height}")
+            
+        except (json.JSONDecodeError, IOError, KeyError) as e:
+            logger.debug(f"Error loading window geometry: {e}")
+        except Exception as e:
+            logger.warning(f"Unexpected error restoring window geometry: {e}")
+    
+    def moveEvent(self, event):
+        """Handle window move events to save position."""
+        super().moveEvent(event)
+        # Save geometry after a short delay to avoid excessive writes during dragging
+        if hasattr(self, '_geometry_save_timer'):
+            self._geometry_save_timer.stop()
+        else:
+            self._geometry_save_timer = QtCore.QTimer()
+            self._geometry_save_timer.setSingleShot(True)
+            self._geometry_save_timer.timeout.connect(self._save_window_geometry)
+        
+        self._geometry_save_timer.start(500)  # Save after 500ms of no movement
+    
+    def resizeEvent(self, event):
+        """Handle window resize events to save size."""
+        super().resizeEvent(event)
+        # Save geometry after a short delay to avoid excessive writes during resizing
+        if hasattr(self, '_geometry_save_timer'):
+            self._geometry_save_timer.stop()
+        else:
+            self._geometry_save_timer = QtCore.QTimer()
+            self._geometry_save_timer.setSingleShot(True)
+            self._geometry_save_timer.timeout.connect(self._save_window_geometry)
+        
+        self._geometry_save_timer.start(500)  # Save after 500ms of no resizing
+    
+    def changeEvent(self, event):
+        """Handle window state changes (maximize/minimize)."""
+        super().changeEvent(event)
+        if event.type() == QtCore.QEvent.Type.WindowStateChange:
+            # Save geometry when window state changes
+            QtCore.QTimer.singleShot(100, self._save_window_geometry)
+    
     def closeEvent(self, event):
         """Handle application close event with proper cleanup."""
+        # Save window geometry before closing
+        self._save_window_geometry()
+        
         self.cleanup_resources()
         event.accept()
     
