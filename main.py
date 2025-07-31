@@ -2140,11 +2140,22 @@ class MainWindow(QtWidgets.QMainWindow):
             screen_width = screen.width()
             screen_height = screen.height()
             
-            # Validate and adjust position if necessary
-            x = max(0, min(geometry_data['x'], screen_width - 100))  # Ensure at least 100px visible
-            y = max(0, min(geometry_data['y'], screen_height - 100))
+            # Use exact saved position with minimal validation (only prevent completely offscreen)
+            x = geometry_data['x']
+            y = geometry_data['y']
             width = max(640, min(geometry_data['width'], screen_width))  # Minimum 640px wide
             height = max(720, min(geometry_data['height'], screen_height))  # Minimum 720px tall (matching initial height)
+            
+            # Only adjust position if window would be completely invisible
+            # Allow negative positions for multi-monitor setups
+            if x + width < 50:  # Less than 50px visible horizontally
+                x = 50 - width
+            if y + height < 50:  # Less than 50px visible vertically  
+                y = 50 - height
+            if x > screen_width - 50:  # Too far right
+                x = screen_width - 50
+            if y > screen_height - 50:  # Too far down
+                y = screen_height - 50
             
             # Apply geometry
             self.setGeometry(x, y, width, height)
