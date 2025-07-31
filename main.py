@@ -1656,6 +1656,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.theme_monitor_timer = QtCore.QTimer()
         self.theme_monitor_timer.timeout.connect(self._check_system_theme_change)
         self._last_system_theme = None
+        
+        # Save initial geometry after window is fully shown (delayed to ensure proper initialization)
+        QtCore.QTimer.singleShot(1000, self._save_window_geometry)
     
     def _check_system_theme_change(self):
         """
@@ -2055,7 +2058,13 @@ class MainWindow(QtWidgets.QMainWindow):
     def _save_window_geometry(self):
         """Save the current window size and position to a config file."""
         try:
+            # Don't save if window is minimized or not visible
+            if self.isMinimized() or not self.isVisible():
+                return
+                
             config_path = os.path.join(CONFIG_DIR, 'window_config.json')
+            
+            # Get current geometry
             geometry_data = {
                 'x': self.x(),
                 'y': self.y(),
@@ -2063,6 +2072,12 @@ class MainWindow(QtWidgets.QMainWindow):
                 'height': self.height(),
                 'maximized': self.isMaximized()
             }
+            
+            # Validate geometry data before saving
+            if (geometry_data['width'] < 400 or geometry_data['height'] < 300 or
+                geometry_data['x'] < -100 or geometry_data['y'] < -100):
+                logger.debug(f"Invalid geometry data, skipping save: {geometry_data}")
+                return
             
             # Load existing config if it exists
             existing_config = {}
@@ -2079,6 +2094,10 @@ class MainWindow(QtWidgets.QMainWindow):
             existing_config['theme_mode'] = self.theme_mode
             existing_config['logging_level'] = self.logging_combo.currentData()
             
+            # Create directory if it doesn't exist
+            os.makedirs(CONFIG_DIR, exist_ok=True)
+            
+            # Write config file
             with open(config_path, 'w') as f:
                 json.dump(existing_config, f, indent=2)
             
@@ -2110,6 +2129,12 @@ class MainWindow(QtWidgets.QMainWindow):
                 logger.debug("Incomplete geometry data, using defaults")
                 return
             
+            # Additional validation for reasonable values
+            if (geometry_data['width'] < 400 or geometry_data['height'] < 300 or
+                geometry_data['width'] > 5000 or geometry_data['height'] > 5000):
+                logger.debug("Invalid geometry dimensions, using defaults")
+                return
+            
             # Get screen dimensions to validate position
             screen = QtWidgets.QApplication.primaryScreen().geometry()
             screen_width = screen.width()
@@ -2119,7 +2144,7 @@ class MainWindow(QtWidgets.QMainWindow):
             x = max(0, min(geometry_data['x'], screen_width - 100))  # Ensure at least 100px visible
             y = max(0, min(geometry_data['y'], screen_height - 100))
             width = max(640, min(geometry_data['width'], screen_width))  # Minimum 640px wide
-            height = max(800, min(geometry_data['height'], screen_height))  # Minimum 800px tall
+            height = max(720, min(geometry_data['height'], screen_height))  # Minimum 720px tall (matching initial height)
             
             # Apply geometry
             self.setGeometry(x, y, width, height)
