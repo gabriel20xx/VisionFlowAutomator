@@ -2146,23 +2146,34 @@ class MainWindow(QtWidgets.QMainWindow):
             width = max(640, min(geometry_data['width'], screen_width))  # Minimum 640px wide
             height = max(720, min(geometry_data['height'], screen_height))  # Minimum 720px tall (matching initial height)
             
-            # Only adjust position if window would be completely invisible
+            # Only adjust position if window would be completely invisible (very permissive)
             # Allow negative positions for multi-monitor setups
-            if x + width < 50:  # Less than 50px visible horizontally
-                x = 50 - width
-            if y + height < 50:  # Less than 50px visible vertically  
-                y = 50 - height
-            if x > screen_width - 50:  # Too far right
-                x = screen_width - 50
-            if y > screen_height - 50:  # Too far down
-                y = screen_height - 50
+            if x + width < 10:  # Less than 10px visible horizontally
+                x = 10 - width
+            if y + height < 10:  # Less than 10px visible vertically  
+                y = 10 - height
+            if x > screen_width - 10:  # Too far right (only if less than 10px visible)
+                x = screen_width - 10
+            if y > screen_height - 10:  # Too far down (only if less than 10px visible)
+                y = screen_height - 10
             
-            # Apply geometry
+            # Apply geometry immediately
             self.setGeometry(x, y, width, height)
+            
+            # Log the exact values being applied for debugging
+            logger.debug(f"Applying geometry: x={x}, y={y}, width={width}, height={height}")
+            logger.debug(f"Original saved position: x={geometry_data['x']}, y={geometry_data['y']}")
+            logger.debug(f"Screen dimensions: {screen_width}x{screen_height}")
+            
+            # Apply geometry again with a small delay to override any system adjustments
+            QtCore.QTimer.singleShot(50, lambda: self.setGeometry(x, y, width, height))
             
             # Restore maximized state if applicable
             if geometry_data.get('maximized', False):
                 self.showMaximized()
+            else:
+                # Ensure we're not maximized and apply the geometry one more time
+                QtCore.QTimer.singleShot(100, lambda: self.setGeometry(x, y, width, height))
             
             # Restore update interval if saved
             saved_interval = config.get('update_interval')
