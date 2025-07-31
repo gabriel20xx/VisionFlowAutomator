@@ -1412,6 +1412,13 @@ class MainWindow(QtWidgets.QMainWindow):
         self.apply_theme()
         self._update_theme_combo_text()
         
+        # Apply title bar theming with multiple attempts to ensure it works
+        is_dark = self.get_effective_dark_mode()
+        self.apply_dark_title_bar(is_dark)
+        QtCore.QTimer.singleShot(100, lambda: self.apply_dark_title_bar(is_dark))
+        QtCore.QTimer.singleShot(300, lambda: self.apply_dark_title_bar(is_dark))
+        QtCore.QTimer.singleShot(1000, lambda: self.apply_dark_title_bar(is_dark))
+        
         # Start theme monitoring if in system mode
         if self.theme_mode == 'system':
             self._last_system_theme = self.is_system_dark_theme()
@@ -1665,31 +1672,6 @@ class MainWindow(QtWidgets.QMainWindow):
         if hasattr(self, 'theme_monitor_timer') and self.theme_monitor_timer:
             self.theme_monitor_timer.stop()
     
-    def _toggle_resource_display(self):
-        """Toggle the visibility of resource usage widgets."""
-        if self.resource_widgets_visible:
-            # Hide resource widgets
-            self.memory_label.hide()
-            self.cpu_label.hide()
-            self.system_memory_label.hide()
-            self.cache_label.hide()
-            self.gpu_label.hide()
-            self.performance_label.hide()
-            self.update_interval_combo.hide()
-            self.toggle_resources_btn.setText('Show Resources')
-            self.resource_widgets_visible = False
-        else:
-            # Show resource widgets
-            self.memory_label.show()
-            self.cpu_label.show()
-            self.system_memory_label.show()
-            self.cache_label.show()
-            self.gpu_label.show()
-            self.performance_label.show()
-            self.update_interval_combo.show()
-            self.toggle_resources_btn.setText('Hide Resources')
-            self.resource_widgets_visible = True
-    
     def _show_psutil_info(self):
         """Show information about installing psutil for enhanced monitoring."""
         msg = QtWidgets.QMessageBox(self)
@@ -1884,8 +1866,11 @@ class MainWindow(QtWidgets.QMainWindow):
     def showEvent(self, event):
         """Handle window show event to ensure title bar theming is applied."""
         super().showEvent(event)
-        # Apply title bar theming when window is shown
-        QtCore.QTimer.singleShot(50, lambda: self.apply_dark_title_bar(self.get_effective_dark_mode()))
+        # Apply title bar theming when window is shown with multiple attempts
+        is_dark = self.get_effective_dark_mode()
+        QtCore.QTimer.singleShot(50, lambda: self.apply_dark_title_bar(is_dark))
+        QtCore.QTimer.singleShot(150, lambda: self.apply_dark_title_bar(is_dark))
+        QtCore.QTimer.singleShot(300, lambda: self.apply_dark_title_bar(is_dark))
     
     def changeEvent(self, event):
         """Handle window state changes (maximize/minimize)."""
@@ -2107,7 +2092,7 @@ class MainWindow(QtWidgets.QMainWindow):
                         )
                         
                         if result == 0:  # S_OK
-                            logger.debug(f"Applied Windows dark title bar ({'newer' if use_newer_api else 'legacy'} API)")
+                            logger.debug(f"Applied Windows {'dark' if enable_dark else 'light'} title bar ({'newer' if use_newer_api else 'legacy'} API)")
                             
                             # Force window to redraw
                             self.update()
@@ -2116,7 +2101,7 @@ class MainWindow(QtWidgets.QMainWindow):
                             logger.debug(f"Windows title bar API returned error code: {result}")
                             
                     except Exception as e:
-                        logger.debug(f"Windows dark title bar API call failed: {e}")
+                        logger.debug(f"Windows {'dark' if enable_dark else 'light'} title bar API call failed: {e}")
                         
                         # Try the other API as fallback
                         fallback_attribute = DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1 if use_newer_api else DWMWA_USE_IMMERSIVE_DARK_MODE
@@ -2128,7 +2113,7 @@ class MainWindow(QtWidgets.QMainWindow):
                                 ctypes.sizeof(ctypes.c_int)
                             )
                             if result == 0:
-                                logger.debug("Applied Windows dark title bar (fallback API)")
+                                logger.debug(f"Applied Windows {'dark' if enable_dark else 'light'} title bar (fallback API)")
                                 self.update()
                                 return True
                         except Exception as fallback_e:
@@ -2186,8 +2171,17 @@ class MainWindow(QtWidgets.QMainWindow):
         colors = self.get_theme_styles()
         is_dark = self.get_effective_dark_mode()
         
-        # Apply dark title bar if in dark mode (with small delay to ensure window is ready)
-        QtCore.QTimer.singleShot(10, lambda: self.apply_dark_title_bar(is_dark))
+        # Apply title bar theming with multiple attempts to ensure it takes effect
+        def apply_title_bar_theming():
+            success = self.apply_dark_title_bar(is_dark)
+            if not success:
+                # Retry after a longer delay if first attempt failed
+                QtCore.QTimer.singleShot(100, lambda: self.apply_dark_title_bar(is_dark))
+        
+        # Apply immediately and with delays to handle different timing scenarios
+        apply_title_bar_theming()
+        QtCore.QTimer.singleShot(50, apply_title_bar_theming)
+        QtCore.QTimer.singleShot(200, apply_title_bar_theming)
         
         # Main window style
         main_style = f"""
@@ -2196,6 +2190,22 @@ class MainWindow(QtWidgets.QMainWindow):
                 color: {colors['foreground']};
             }}
             QPushButton {{
+                font-size: 9pt;
+                min-height: 20px;
+                padding: 2px 6px;
+                min-width: 90px;
+                background-color: {colors['button_bg']};
+                border: 1px solid {colors['border']};
+                border-radius: 3px;
+                color: {colors['foreground']};
+            }}
+            QPushButton:hover {{
+                background-color: {colors['button_hover']};
+            }}
+            QPushButton:pressed {{
+                background-color: {colors['border']};
+            }}
+            QComboBox {{
                 font-size: 9pt;
                 min-height: 20px;
                 padding: 2px 6px;
@@ -2314,6 +2324,10 @@ class MainWindow(QtWidgets.QMainWindow):
             
             self.apply_theme()
             self._update_theme_combo_text()
+            
+            # Apply title bar theming immediately for theme changes
+            is_dark = self.get_effective_dark_mode()
+            self.apply_dark_title_bar(is_dark)
             
             # Save the theme preference immediately
             self._save_window_geometry()
@@ -2516,18 +2530,10 @@ class MainWindow(QtWidgets.QMainWindow):
         interval_layout.addStretch(1)
         interval_group.setLayout(interval_layout)
         
-        # Toggle button
-        self.toggle_resources_btn = QtWidgets.QPushButton('Hide Resources')
-        self.toggle_resources_btn.setMaximumWidth(100)
-        self.toggle_resources_btn.setToolTip('Toggle resource usage display. Install psutil for detailed system metrics.')
-        self.toggle_resources_btn.clicked.connect(self._toggle_resource_display)
-        
-        # Add controls to layout
-        resource_layout.addWidget(interval_group, 3, 0)
-        resource_layout.addWidget(self.toggle_resources_btn, 3, 1)
+        # Add controls to layout - update interval group spans full width
+        resource_layout.addWidget(interval_group, 3, 0, 1, 2)
 
         self.resource_group.setLayout(resource_layout)
-        self.resource_widgets_visible = True
 
         # Main layout
         layout = QtWidgets.QGridLayout()
