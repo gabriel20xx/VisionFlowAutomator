@@ -2210,8 +2210,8 @@ class MainWindow(QtWidgets.QMainWindow):
             QPushButton {{
                 font-size: 9pt;
                 min-height: 20px;
-                padding: 2px 6px;
-                min-width: 90px;
+                padding: 2px 4px;
+                min-width: 35px;
                 background-color: {colors['button_bg']};
                 border: 1px solid {colors['border']};
                 border-radius: 3px;
@@ -2490,9 +2490,18 @@ class MainWindow(QtWidgets.QMainWindow):
         self.btn_move_down_step = QtWidgets.QPushButton('Move Down')
         self.btn_move_down_step.setToolTip('Move step down (lower priority)')
         self.btn_move_down_step.clicked.connect(self._log_btn_move_down_step)
+        
+        # Set all step buttons to have flexible sizing
+        step_buttons = [self.btn_add_step, self.btn_edit_step, self.btn_del_step, 
+                       self.btn_rename_step, self.btn_move_up_step, self.btn_move_down_step]
+        for btn in step_buttons:
+            btn.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Fixed)
+            btn.setMinimumWidth(35)  # Further reduced minimum width for full text
+            btn.setMaximumHeight(24)  # Keep height consistent
+        
         step_btn_group_layout = QtWidgets.QHBoxLayout()
-        step_btn_group_layout.setSpacing(4)
-        step_btn_group_layout.setContentsMargins(4, 4, 4, 4)
+        step_btn_group_layout.setSpacing(2)  # Reduced spacing
+        step_btn_group_layout.setContentsMargins(2, 2, 2, 2)  # Reduced margins
         step_btn_group_layout.addWidget(self.btn_add_step)
         step_btn_group_layout.addWidget(self.btn_edit_step)
         step_btn_group_layout.addWidget(self.btn_del_step)
