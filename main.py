@@ -51,6 +51,12 @@ def get_gpu_memory_info():
     Returns dict with GPU memory info or basic info if no GPU found.
     Uses caching to prevent repeated expensive system calls.
     """
+    # Import modules at function level to avoid scope issues
+    import json
+    import subprocess
+    import platform
+    import os
+    
     # Cache GPU info for 30 seconds to prevent UI hanging
     current_time = time.time()
     cache_duration = 30  # seconds
@@ -158,9 +164,6 @@ def get_gpu_memory_info():
     
     # Try Windows-specific methods
     try:
-        import subprocess
-        import re
-        
         # Try nvidia-smi command for NVIDIA GPUs
         try:
             result = subprocess.run(['nvidia-smi', '--query-gpu=name,memory.total,memory.used,memory.free', '--format=csv,noheader,nounits'], 
@@ -200,7 +203,6 @@ def get_gpu_memory_info():
             ], capture_output=True, text=True, timeout=3)  # Reduced timeout
             
             if wmi_result.returncode == 0 and wmi_result.stdout.strip():
-                import json
                 wmi_data = json.loads(wmi_result.stdout.strip())
                 
                 # Handle both single GPU and multiple GPUs
@@ -236,7 +238,6 @@ def get_gpu_memory_info():
             ], capture_output=True, text=True, timeout=3)  # Reduced timeout
             
             if wmi_result.returncode == 0 and wmi_result.stdout.strip():
-                import json
                 wmi_data = json.loads(wmi_result.stdout.strip())
                 
                 # Handle both single GPU and multiple GPUs
@@ -271,7 +272,6 @@ def get_gpu_memory_info():
             ], capture_output=True, text=True, timeout=3)  # Reduced timeout
             
             if wmi_result.returncode == 0 and wmi_result.stdout.strip():
-                import json
                 wmi_data = json.loads(wmi_result.stdout.strip())
                 
                 # Handle both single GPU and multiple GPUs
@@ -306,8 +306,6 @@ def get_gpu_memory_info():
     
     # Try DirectX DXGI detection (Windows 10+)
     try:
-        import subprocess
-        
         # Use PowerShell to query DirectX information
         dxdiag_result = subprocess.run([
             'powershell', '-Command',
@@ -319,7 +317,6 @@ def get_gpu_memory_info():
         ], capture_output=True, text=True, timeout=3)  # Reduced timeout
         
         if dxdiag_result.returncode == 0 and dxdiag_result.stdout.strip():
-            import json
             dx_data = json.loads(dxdiag_result.stdout.strip())
             
             if isinstance(dx_data, dict):
@@ -346,9 +343,6 @@ def get_gpu_memory_info():
     
     # Try Linux/macOS methods for integrated GPUs
     try:
-        import subprocess
-        import platform
-        
         system = platform.system().lower()
         
         if system == 'linux':
@@ -390,7 +384,6 @@ def get_gpu_memory_info():
             
             # Try checking /sys/class/drm for Intel iGPU on Linux
             try:
-                import os
                 drm_path = '/sys/class/drm'
                 if os.path.exists(drm_path):
                     drm_devices = os.listdir(drm_path)
@@ -419,7 +412,6 @@ def get_gpu_memory_info():
                 ], capture_output=True, text=True, timeout=15)
                 
                 if profiler_result.returncode == 0:
-                    import json
                     display_data = json.loads(profiler_result.stdout)
                     
                     displays = display_data.get('SPDisplaysDataType', [])
@@ -1025,26 +1017,8 @@ class MainWindow(QtWidgets.QMainWindow):
             # Get system info
             system_memory = psutil.virtual_memory()
             
-            # Get GPU information with timeout protection
+            # Get GPU information with error handling (no timeout needed due to caching)
             try:
-                # Use a simple timeout mechanism for GPU detection
-                import signal
-                
-                def timeout_handler(signum, frame):
-                    raise TimeoutError("GPU detection timeout")
-                
-                # Set up timeout for GPU detection (3 seconds max)
-                old_handler = signal.signal(signal.SIGALRM, timeout_handler)
-                signal.alarm(3)
-                
-                try:
-                    gpu_info = get_gpu_memory_info()
-                finally:
-                    signal.alarm(0)  # Cancel the alarm
-                    signal.signal(signal.SIGALRM, old_handler)
-                    
-            except (TimeoutError, AttributeError):
-                # Fallback if timeout or signal not available (Windows)
                 gpu_info = get_gpu_memory_info()
             except Exception as e:
                 logger.debug(f"GPU detection failed: {e}")
@@ -1069,7 +1043,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 'gpu_method': gpu_info.get('method', 'none')
             }
         except ImportError:
-            # psutil not available, get GPU info anyway with timeout protection
+            # psutil not available, get GPU info anyway with error handling
             try:
                 gpu_info = get_gpu_memory_info()
             except Exception as e:
