@@ -1272,7 +1272,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.setWindowTitle('Scenario Image Automation')
         # Make window larger to accommodate all UI elements
         min_width = 640
-        min_height = 800
+        min_height = 720
         self.setMinimumSize(min_width, min_height)
         self.setGeometry(100, 100, min_width, min_height)
         self.running = False
