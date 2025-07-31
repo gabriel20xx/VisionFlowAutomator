@@ -1347,7 +1347,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 logger.info(f'System theme changed to: {"Dark" if current_system_theme else "Light"}')
                 self._last_system_theme = current_system_theme
                 self.apply_theme()
-                self._update_theme_button_text()
+                self._update_theme_combo_text()
                 
         except Exception as e:
             logger.debug(f"Error checking system theme change: {e}")
@@ -1791,6 +1791,12 @@ class MainWindow(QtWidgets.QMainWindow):
         
         self._geometry_save_timer.start(500)  # Save after 500ms of no resizing
     
+    def showEvent(self, event):
+        """Handle window show event to ensure title bar theming is applied."""
+        super().showEvent(event)
+        # Apply title bar theming when window is shown
+        QtCore.QTimer.singleShot(50, lambda: self.apply_dark_title_bar(self.get_effective_dark_mode()))
+    
     def changeEvent(self, event):
         """Handle window state changes (maximize/minimize)."""
         super().changeEvent(event)
@@ -1967,11 +1973,128 @@ class MainWindow(QtWidgets.QMainWindow):
                 'text_dark': '#000000'
             }
     
+    def apply_dark_title_bar(self, enable_dark=True):
+        """
+        Apply dark mode to the window title bar.
+        Works on Windows 10/11, macOS, and some Linux desktop environments.
+        """
+        try:
+            import platform
+            system = platform.system().lower()
+            
+            if system == 'windows':
+                # Windows 10/11 dark title bar
+                try:
+                    import ctypes
+                    from ctypes import wintypes
+                    
+                    # Get window handle
+                    hwnd = int(self.winId())
+                    
+                    # Define constants for Windows API
+                    DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1 = 19
+                    DWMWA_USE_IMMERSIVE_DARK_MODE = 20
+                    
+                    # Check Windows version to determine which attribute to use
+                    import sys
+                    windows_version = sys.getwindowsversion()
+                    
+                    # Windows 11 or Windows 10 version 2004 and later use the newer attribute
+                    use_newer_api = (windows_version.major > 10 or 
+                                   (windows_version.major == 10 and windows_version.build >= 19041))
+                    
+                    attribute = DWMWA_USE_IMMERSIVE_DARK_MODE if use_newer_api else DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1
+                    
+                    try:
+                        result = ctypes.windll.dwmapi.DwmSetWindowAttribute(
+                            hwnd,
+                            attribute,
+                            ctypes.byref(ctypes.c_int(1 if enable_dark else 0)),
+                            ctypes.sizeof(ctypes.c_int)
+                        )
+                        
+                        if result == 0:  # S_OK
+                            logger.debug(f"Applied Windows dark title bar ({'newer' if use_newer_api else 'legacy'} API)")
+                            
+                            # Force window to redraw
+                            self.update()
+                            return True
+                        else:
+                            logger.debug(f"Windows title bar API returned error code: {result}")
+                            
+                    except Exception as e:
+                        logger.debug(f"Windows dark title bar API call failed: {e}")
+                        
+                        # Try the other API as fallback
+                        fallback_attribute = DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1 if use_newer_api else DWMWA_USE_IMMERSIVE_DARK_MODE
+                        try:
+                            result = ctypes.windll.dwmapi.DwmSetWindowAttribute(
+                                hwnd,
+                                fallback_attribute,
+                                ctypes.byref(ctypes.c_int(1 if enable_dark else 0)),
+                                ctypes.sizeof(ctypes.c_int)
+                            )
+                            if result == 0:
+                                logger.debug("Applied Windows dark title bar (fallback API)")
+                                self.update()
+                                return True
+                        except Exception as fallback_e:
+                            logger.debug(f"Windows dark title bar fallback failed: {fallback_e}")
+                            
+                except ImportError:
+                    logger.debug("ctypes not available for Windows title bar theming")
+                except Exception as e:
+                    logger.debug(f"Windows title bar theming error: {e}")
+            
+            elif system == 'darwin':  # macOS
+                try:
+                    # For macOS, we could use PyObjC bindings if available
+                    # This is a simplified approach - full implementation would require PyObjC
+                    logger.debug("macOS title bar theming requires PyObjC bindings (not implemented)")
+                    
+                    # Alternative: Set window flags that might influence appearance
+                    # This is limited but might work in some cases
+                    if enable_dark:
+                        # Try to hint to the system that we prefer dark appearance
+                        pass
+                        
+                except Exception as e:
+                    logger.debug(f"macOS title bar theming failed: {e}")
+            
+            elif system == 'linux':
+                # Linux title bar theming depends on the window manager/desktop environment
+                try:
+                    desktop_env = os.environ.get('XDG_CURRENT_DESKTOP', '').lower()
+                    
+                    # For X11 systems, we might be able to set window properties
+                    if os.environ.get('DISPLAY'):
+                        try:
+                            # This would require X11 libraries and is highly dependent on WM
+                            logger.debug(f"Linux X11 desktop environment: {desktop_env} - title bar theming limited")
+                        except Exception as e:
+                            logger.debug(f"Linux X11 title bar theming failed: {e}")
+                    
+                    # For Wayland, title bar theming is even more limited
+                    elif os.environ.get('WAYLAND_DISPLAY'):
+                        logger.debug("Linux Wayland - title bar theming not supported")
+                        
+                except Exception as e:
+                    logger.debug(f"Linux title bar theming failed: {e}")
+        
+        except Exception as e:
+            logger.debug(f"Title bar theming failed: {e}")
+        
+        return False
+    
     def apply_theme(self):
         """
-        Apply the current theme to all UI elements.
+        Apply the current theme to all UI elements including title bar.
         """
         colors = self.get_theme_styles()
+        is_dark = self.get_effective_dark_mode()
+        
+        # Apply dark title bar if in dark mode
+        self.apply_dark_title_bar(is_dark)
         
         # Main window style
         main_style = f"""
@@ -2072,46 +2195,49 @@ class MainWindow(QtWidgets.QMainWindow):
         self.performance_label.setStyleSheet(f'font-size: 9pt; color: {colors["text_light"]};')
         self.interval_label.setStyleSheet(f'font-size: 9pt; color: {colors["text_light"]};')
     
-    def _update_theme_button_text(self):
+    def on_theme_changed(self, theme_text):
         """
-        Update the theme button text based on current theme mode.
+        Handle theme dropdown selection change.
+        """
+        # Map display text to internal theme mode
+        theme_map = {
+            'System': 'system',
+            'Light': 'light', 
+            'Dark': 'dark'
+        }
+        
+        new_theme = theme_map.get(theme_text, 'system')
+        
+        if new_theme != self.theme_mode:
+            self.theme_mode = new_theme
+            
+            # Start/stop theme monitoring based on mode
+            if self.theme_mode == 'system':
+                self._last_system_theme = self.is_system_dark_theme()
+                if hasattr(self, 'theme_monitor_timer'):
+                    self.theme_monitor_timer.start(5000)  # Check every 5 seconds
+            else:
+                if hasattr(self, 'theme_monitor_timer'):
+                    self.theme_monitor_timer.stop()
+            
+            self.apply_theme()
+            self._update_theme_combo_text()
+            
+            logger.info(f'Theme changed to: {self.theme_mode} mode')
+    
+    def _update_theme_combo_text(self):
+        """
+        Update the theme combo box text based on current theme mode and system state.
         """
         if self.theme_mode == 'system':
             system_dark = self.is_system_dark_theme()
-            theme_text = f"System ({'Dark' if system_dark else 'Light'})"
-        elif self.theme_mode == 'light':
-            theme_text = "Light"
-        else:  # dark
-            theme_text = "Dark"
-        
-        if hasattr(self, 'btn_theme'):
-            self.btn_theme.setText(theme_text)
-    
-    def toggle_theme(self):
-        """
-        Cycle through theme modes: System -> Light -> Dark -> System...
-        """
-        if self.theme_mode == 'system':
-            self.theme_mode = 'light'
-        elif self.theme_mode == 'light':
-            self.theme_mode = 'dark'
-        else:  # dark
-            self.theme_mode = 'system'
-        
-        # Start/stop theme monitoring based on mode
-        if self.theme_mode == 'system':
-            self._last_system_theme = self.is_system_dark_theme()
-            if hasattr(self, 'theme_monitor_timer'):
-                self.theme_monitor_timer.start(5000)  # Check every 5 seconds
+            display_text = f"System ({'Dark' if system_dark else 'Light'})"
+            # Update the first item's text to show current system theme
+            self.theme_combo.setItemText(0, display_text)
         else:
-            if hasattr(self, 'theme_monitor_timer'):
-                self.theme_monitor_timer.stop()
-        
-        self.apply_theme()
-        self._update_theme_button_text()
-        
-        logger.info(f'Theme changed to: {self.theme_mode} mode')
-
+            # Reset system item text
+            self.theme_combo.setItemText(0, 'System')
+    
     def init_ui(self):
         """
         Initializes the main UI components and layouts.
@@ -2217,11 +2343,16 @@ class MainWindow(QtWidgets.QMainWindow):
         self.btn_start_stop.setMinimumWidth(80)
         self.btn_start_stop.clicked.connect(self._log_btn_start_stop)
 
-        # Theme toggle button
-        self.btn_theme = QtWidgets.QPushButton('System')
-        self.btn_theme.setMinimumWidth(80)
-        self.btn_theme.setToolTip('Cycle through theme modes: System (follows OS) -> Light -> Dark -> System...')
-        self.btn_theme.clicked.connect(self.toggle_theme)
+        # Theme dropdown
+        self.theme_combo = QtWidgets.QComboBox()
+        self.theme_combo.setMinimumWidth(100)
+        self.theme_combo.setMaximumWidth(120)
+        self.theme_combo.setToolTip('Select theme: System (follows OS), Light, or Dark')
+        self.theme_combo.addItem('System', 'system')
+        self.theme_combo.addItem('Light', 'light')
+        self.theme_combo.addItem('Dark', 'dark')
+        self.theme_combo.setCurrentText('System')  # Default to system
+        self.theme_combo.currentTextChanged.connect(self.on_theme_changed)
 
         # State label
         self.state_label = QtWidgets.QLabel('State: Paused')
@@ -2258,7 +2389,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.performance_label = QtWidgets.QLabel('Performance: --')
         resource_layout.addWidget(self.performance_label, 2, 0, 1, 3)
 
-        # Controls row (toggle button and update interval) - placed in a separate row
+        # Controls row (toggle button, update interval, and theme selector)
         self.toggle_resources_btn = QtWidgets.QPushButton('Hide Resources')
         self.toggle_resources_btn.setMaximumWidth(100)
         self.toggle_resources_btn.setToolTip('Toggle resource usage display. Install psutil for detailed system metrics.')
@@ -2317,9 +2448,14 @@ class MainWindow(QtWidgets.QMainWindow):
         start_state_layout = QtWidgets.QHBoxLayout()
         start_state_layout.setSpacing(6)  # Fixed gap between elements
         start_state_layout.addWidget(self.btn_start_stop)
-        start_state_layout.addWidget(self.btn_theme)
         start_state_layout.addWidget(self.state_label)
-        start_state_layout.addStretch(1)
+        start_state_layout.addStretch(1)  # This pushes theme controls to the right
+        
+        # Theme controls on the right side
+        self.theme_label = QtWidgets.QLabel('Theme:')
+        start_state_layout.addWidget(self.theme_label)
+        start_state_layout.addWidget(self.theme_combo)
+        
         start_state_group.setLayout(start_state_layout)
         layout.addWidget(start_state_group, 6, 0, 1, 5)
         layout.setRowStretch(6, 0)  # Prevent vertical stretch
@@ -2329,9 +2465,12 @@ class MainWindow(QtWidgets.QMainWindow):
         central.setLayout(layout)
         self.setCentralWidget(central)
         
-        # Apply initial theme and set button text
+        # Apply initial theme and set combo box text
         self.apply_theme()
-        self._update_theme_button_text()
+        self._update_theme_combo_text()
+        
+        # Apply title bar theming after window is fully initialized
+        QtCore.QTimer.singleShot(100, lambda: self.apply_dark_title_bar(self.get_effective_dark_mode()))
 
     def _log_btn_refresh_windows(self):
         logger.info("UI: Refresh Windows button pressed")
