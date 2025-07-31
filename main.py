@@ -1270,9 +1270,9 @@ class MainWindow(QtWidgets.QMainWindow):
         """
         super().__init__()
         self.setWindowTitle('Scenario Image Automation')
-        # Make window smaller and more compact
+        # Make window larger to accommodate all UI elements
         min_width = 640
-        min_height = 640
+        min_height = 800
         self.setMinimumSize(min_width, min_height)
         self.setGeometry(100, 100, min_width, min_height)
         self.running = False
@@ -1801,7 +1801,7 @@ class MainWindow(QtWidgets.QMainWindow):
             x = max(0, min(geometry_data['x'], screen_width - 100))  # Ensure at least 100px visible
             y = max(0, min(geometry_data['y'], screen_height - 100))
             width = max(640, min(geometry_data['width'], screen_width))  # Minimum 640px wide
-            height = max(480, min(geometry_data['height'], screen_height))  # Minimum 480px tall
+            height = max(800, min(geometry_data['height'], screen_height))  # Minimum 800px tall
             
             # Apply geometry
             self.setGeometry(x, y, width, height)
