@@ -1283,6 +1283,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.selected_step_idx = None
         self.last_toggle_time = 0  # For debounce of start/stop
         
+        # Theme support
+        self.theme_mode = 'system'  # 'light', 'dark', or 'system'
+        
         # Memory optimization attributes
         self._last_screenshot = None
         self._last_screenshot_time = 0
@@ -1314,6 +1317,40 @@ class MainWindow(QtWidgets.QMainWindow):
         
         # Initial resource display update (delayed to prevent startup hanging)
         QtCore.QTimer.singleShot(2000, self._enable_resource_monitoring)
+        
+        # Setup system theme monitoring timer (only when in system mode)
+        self.theme_monitor_timer = QtCore.QTimer()
+        self.theme_monitor_timer.timeout.connect(self._check_system_theme_change)
+        self._last_system_theme = None
+        
+        # Start theme monitoring if in system mode
+        if self.theme_mode == 'system':
+            self.theme_monitor_timer.start(5000)  # Check every 5 seconds
+    
+    def _check_system_theme_change(self):
+        """
+        Check if the system theme has changed and update accordingly.
+        Only runs when theme_mode is 'system'.
+        """
+        if self.theme_mode != 'system':
+            self.theme_monitor_timer.stop()
+            return
+        
+        try:
+            current_system_theme = self.is_system_dark_theme()
+            
+            if self._last_system_theme is None:
+                self._last_system_theme = current_system_theme
+                return
+            
+            if current_system_theme != self._last_system_theme:
+                logger.info(f'System theme changed to: {"Dark" if current_system_theme else "Light"}')
+                self._last_system_theme = current_system_theme
+                self.apply_theme()
+                self._update_theme_button_text()
+                
+        except Exception as e:
+            logger.debug(f"Error checking system theme change: {e}")
     
     def _enable_resource_monitoring(self):
         """Enable resource monitoring after startup delay."""
@@ -1406,16 +1443,18 @@ class MainWindow(QtWidgets.QMainWindow):
     
     def _update_resource_display(self, memory_info):
         """
-        Update the resource usage display in the UI.
+        Update the resource usage display in the UI with theme-aware colors.
         """
         try:
+            colors = self.get_theme_styles()
+            
             # Memory usage
             if memory_info.get('has_psutil', False):
                 memory_text = f"Memory: {memory_info['process_memory_mb']:.1f}MB ({memory_info['process_memory_percent']:.1f}%)"
-                memory_color = '#d9534f' if memory_info['process_memory_percent'] > 10 else '#5cb85c'
+                memory_color = colors['error'] if memory_info['process_memory_percent'] > 10 else colors['success']
             else:
                 memory_text = "Memory: N/A (psutil needed)"
-                memory_color = '#f0ad4e'
+                memory_color = colors['warning']
             
             self.memory_label.setText(memory_text)
             self.memory_label.setStyleSheet(f'font-size: 9pt; color: {memory_color};')
@@ -1428,10 +1467,10 @@ class MainWindow(QtWidgets.QMainWindow):
             # CPU usage
             if memory_info.get('has_psutil', False):
                 cpu_text = f"CPU: {memory_info['cpu_percent']:.1f}%"
-                cpu_color = '#d9534f' if memory_info['cpu_percent'] > 50 else '#5cb85c'
+                cpu_color = colors['error'] if memory_info['cpu_percent'] > 50 else colors['success']
             else:
                 cpu_text = "CPU: N/A"
-                cpu_color = '#777'
+                cpu_color = colors['text_light']
             
             self.cpu_label.setText(cpu_text)
             self.cpu_label.setStyleSheet(f'font-size: 9pt; color: {cpu_color};')
@@ -1439,17 +1478,17 @@ class MainWindow(QtWidgets.QMainWindow):
             # System memory
             if memory_info.get('has_psutil', False):
                 system_text = f"System: {memory_info['system_memory_percent']:.1f}% ({memory_info['system_memory_available_gb']:.1f}GB free)"
-                system_color = '#d9534f' if memory_info['system_memory_percent'] > 85 else '#5cb85c'
+                system_color = colors['error'] if memory_info['system_memory_percent'] > 85 else colors['success']
             else:
                 system_text = "System: N/A"
-                system_color = '#777'
+                system_color = colors['text_light']
             
             self.system_memory_label.setText(system_text)
             self.system_memory_label.setStyleSheet(f'font-size: 9pt; color: {system_color};')
             
             # Cache info
             cache_text = f"Cache: {memory_info['template_cache_size']} templates, {memory_info['cooldown_entries']} cooldowns"
-            cache_color = '#f0ad4e' if memory_info['template_cache_size'] > 20 else '#5bc0de'
+            cache_color = colors['warning'] if memory_info['template_cache_size'] > 20 else colors['info']
             
             self.cache_label.setText(cache_text)
             self.cache_label.setStyleSheet(f'font-size: 9pt; color: {cache_color};')
@@ -1464,23 +1503,23 @@ class MainWindow(QtWidgets.QMainWindow):
                 
                 if gpu_total_mb > 0:
                     gpu_text = f"GPU: {gpu_used_mb:.0f}/{gpu_total_mb:.0f}MB ({gpu_utilization:.1f}%)"
-                    gpu_color = '#d9534f' if gpu_utilization > 80 else '#f0ad4e' if gpu_utilization > 60 else '#5cb85c'
+                    gpu_color = colors['error'] if gpu_utilization > 80 else colors['warning'] if gpu_utilization > 60 else colors['success']
                     
                     # Add GPU name as tooltip
                     gpu_name = memory_info.get('gpu_name', 'Unknown GPU')
                     self.gpu_label.setToolTip(f"GPU: {gpu_name} (detected via {gpu_method})")
                 else:
                     gpu_text = f"GPU: Detected ({gpu_method})"
-                    gpu_color = '#5bc0de'
+                    gpu_color = colors['info']
                     gpu_name = memory_info.get('gpu_name', 'Unknown GPU')
                     self.gpu_label.setToolTip(f"GPU: {gpu_name} (limited info via {gpu_method})")
             elif gpu_method == 'loading':
                 gpu_text = "GPU: Loading..."
-                gpu_color = '#f0ad4e'
+                gpu_color = colors['warning']
                 self.gpu_label.setToolTip("GPU detection in progress...")
             else:
                 gpu_text = "GPU: Not detected"
-                gpu_color = '#777'
+                gpu_color = colors['text_light']
                 self.gpu_label.setToolTip(
                     "No GPU detected or GPU monitoring libraries not available.\n\n"
                     "For enhanced GPU monitoring:\n"
@@ -1507,10 +1546,10 @@ class MainWindow(QtWidgets.QMainWindow):
             if hasattr(self, '_loop_times') and self._loop_times:
                 avg_time = sum(self._loop_times) / len(self._loop_times)
                 perf_text = f"Performance: {avg_time*1000:.0f}ms avg loop time"
-                perf_color = '#d9534f' if avg_time > 0.5 else '#5cb85c'
+                perf_color = colors['error'] if avg_time > 0.5 else colors['success']
             else:
                 perf_text = "Performance: Not running"
-                perf_color = '#777'
+                perf_color = colors['text_light']
             
             self.performance_label.setText(perf_text)
             self.performance_label.setStyleSheet(f'font-size: 9pt; color: {perf_color};')
@@ -1518,22 +1557,32 @@ class MainWindow(QtWidgets.QMainWindow):
             # Show error if any
             if 'error' in memory_info:
                 self.performance_label.setText(f"Error: {memory_info['error'][:50]}...")
-                self.performance_label.setStyleSheet('font-size: 9pt; color: #d9534f;')
+                self.performance_label.setStyleSheet(f'font-size: 9pt; color: {colors["error"]};')
                 
         except Exception as e:
             logger.debug(f"Error updating resource display: {e}")
-            # Show basic fallback info
+            colors = self.get_theme_styles()
+            # Show basic fallback info with theme-aware colors
+            error_color = colors['error']
             self.memory_label.setText("Memory: Error")
+            self.memory_label.setStyleSheet(f'font-size: 9pt; color: {error_color};')
             self.cpu_label.setText("CPU: Error")
+            self.cpu_label.setStyleSheet(f'font-size: 9pt; color: {error_color};')
             self.system_memory_label.setText("System: Error")
+            self.system_memory_label.setStyleSheet(f'font-size: 9pt; color: {error_color};')
             self.cache_label.setText("Cache: Error")
+            self.cache_label.setStyleSheet(f'font-size: 9pt; color: {error_color};')
             self.gpu_label.setText("GPU: Error")
+            self.gpu_label.setStyleSheet(f'font-size: 9pt; color: {error_color};')
             self.performance_label.setText(f"Display Error: {str(e)[:30]}...")
+            self.performance_label.setStyleSheet(f'font-size: 9pt; color: {error_color};')
     
     def stop_monitoring(self):
-        """Stop performance monitoring timer."""
+        """Stop performance monitoring and theme monitoring timers."""
         if hasattr(self, 'monitor_timer') and self.monitor_timer:
             self.monitor_timer.stop()
+        if hasattr(self, 'theme_monitor_timer') and self.theme_monitor_timer:
+            self.theme_monitor_timer.stop()
     
     def _toggle_resource_display(self):
         """Toggle the visibility of resource usage widgets."""
@@ -1782,26 +1831,296 @@ class MainWindow(QtWidgets.QMainWindow):
         
         logger.info("Resources cleaned up successfully")
 
+    def is_system_dark_theme(self):
+        """
+        Detect if the system is using dark theme.
+        Works on Windows 10/11, macOS, and some Linux desktop environments.
+        """
+        try:
+            import platform
+            system = platform.system().lower()
+            
+            if system == 'windows':
+                # Windows 10/11 dark mode detection
+                try:
+                    import winreg
+                    registry = winreg.ConnectRegistry(None, winreg.HKEY_CURRENT_USER)
+                    key = winreg.OpenKey(registry, r"SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize")
+                    value, _ = winreg.QueryValueEx(key, "AppsUseLightTheme")
+                    winreg.CloseKey(key)
+                    return value == 0  # 0 = dark theme, 1 = light theme
+                except (ImportError, FileNotFoundError, OSError):
+                    # Fallback: check if PyQt6 can detect system dark theme
+                    try:
+                        palette = QtWidgets.QApplication.palette()
+                        # Check if the window background is darker than text color
+                        bg_color = palette.color(QtGui.QPalette.ColorRole.Window)
+                        text_color = palette.color(QtGui.QPalette.ColorRole.WindowText)
+                        # Calculate luminance to determine if background is dark
+                        bg_luminance = (0.299 * bg_color.red() + 0.587 * bg_color.green() + 0.114 * bg_color.blue()) / 255
+                        return bg_luminance < 0.5
+                    except:
+                        pass
+            
+            elif system == 'darwin':  # macOS
+                try:
+                    import subprocess
+                    result = subprocess.run(['defaults', 'read', '-g', 'AppleInterfaceStyle'], 
+                                          capture_output=True, text=True, timeout=2)
+                    return result.stdout.strip().lower() == 'dark'
+                except (subprocess.CalledProcessError, subprocess.TimeoutExpired, FileNotFoundError):
+                    pass
+            
+            elif system == 'linux':
+                # Try to detect dark theme on Linux (GNOME, KDE, etc.)
+                try:
+                    import subprocess
+                    import os
+                    
+                    # Try GNOME gsettings
+                    try:
+                        result = subprocess.run(['gsettings', 'get', 'org.gnome.desktop.interface', 'gtk-theme'], 
+                                              capture_output=True, text=True, timeout=2)
+                        theme_name = result.stdout.strip().strip("'").lower()
+                        return any(dark_indicator in theme_name for dark_indicator in ['dark', 'adwaita-dark', 'breeze-dark'])
+                    except (subprocess.CalledProcessError, subprocess.TimeoutExpired, FileNotFoundError):
+                        pass
+                    
+                    # Try KDE configuration
+                    kde_config_paths = [
+                        os.path.expanduser('~/.config/kdeglobals'),
+                        os.path.expanduser('~/.kde/share/config/kdeglobals'),
+                        os.path.expanduser('~/.kde4/share/config/kdeglobals')
+                    ]
+                    
+                    for config_path in kde_config_paths:
+                        try:
+                            if os.path.exists(config_path):
+                                with open(config_path, 'r') as f:
+                                    content = f.read().lower()
+                                    if 'colorscheme=breezedark' in content or 'dark' in content:
+                                        return True
+                        except:
+                            continue
+                    
+                    # Fallback: check environment variables
+                    desktop_env = os.environ.get('XDG_CURRENT_DESKTOP', '').lower()
+                    if 'dark' in desktop_env:
+                        return True
+                        
+                except:
+                    pass
+        
+        except Exception as e:
+            logger.debug(f"System theme detection failed: {e}")
+        
+        # Default fallback: assume light theme
+        return False
+    
+    def get_effective_dark_mode(self):
+        """
+        Get the effective dark mode state based on current theme setting.
+        """
+        if self.theme_mode == 'dark':
+            return True
+        elif self.theme_mode == 'light':
+            return False
+        else:  # system
+            return self.is_system_dark_theme()
+
+    def get_theme_styles(self):
+        """
+        Get the current theme styles (light or dark mode).
+        """
+        is_dark = self.get_effective_dark_mode()
+        
+        if is_dark:
+            return {
+                'background': '#2b2b2b',
+                'foreground': '#ffffff',
+                'button_bg': '#404040',
+                'button_hover': '#505050',
+                'input_bg': '#3c3c3c',
+                'border': '#555555',
+                'accent': '#0078d4',
+                'success': '#107c10',
+                'warning': '#ff8c00',
+                'error': '#d13438',
+                'info': '#0078d4',
+                'text_light': '#cccccc',
+                'text_dark': '#ffffff'
+            }
+        else:
+            return {
+                'background': '#ffffff',
+                'foreground': '#000000',
+                'button_bg': '#f0f0f0',
+                'button_hover': '#e0e0e0',
+                'input_bg': '#ffffff',
+                'border': '#cccccc',
+                'accent': '#0055aa',
+                'success': '#107c10',
+                'warning': '#ff8c00',
+                'error': '#d9534f',
+                'info': '#0055aa',
+                'text_light': '#333333',
+                'text_dark': '#000000'
+            }
+    
+    def apply_theme(self):
+        """
+        Apply the current theme to all UI elements.
+        """
+        colors = self.get_theme_styles()
+        
+        # Main window style
+        main_style = f"""
+            QMainWindow {{
+                background-color: {colors['background']};
+                color: {colors['foreground']};
+            }}
+            QPushButton {{
+                font-size: 9pt;
+                min-height: 20px;
+                padding: 2px 6px;
+                min-width: 70px;
+                background-color: {colors['button_bg']};
+                border: 1px solid {colors['border']};
+                border-radius: 3px;
+                color: {colors['foreground']};
+            }}
+            QPushButton:hover {{
+                background-color: {colors['button_hover']};
+            }}
+            QPushButton:pressed {{
+                background-color: {colors['border']};
+            }}
+            QComboBox {{
+                font-size: 9pt;
+                min-height: 20px;
+                padding: 2px 6px;
+                min-width: 90px;
+                background-color: {colors['input_bg']};
+                border: 1px solid {colors['border']};
+                border-radius: 3px;
+                color: {colors['foreground']};
+            }}
+            QComboBox::drop-down {{
+                border: none;
+                width: 20px;
+            }}
+            QComboBox::down-arrow {{
+                image: none;
+                border-left: 4px solid transparent;
+                border-right: 4px solid transparent;
+                border-top: 4px solid {colors['foreground']};
+                margin: 0px 4px 0px 4px;
+            }}
+            QListWidget {{
+                font-size: 9pt;
+                min-width: 200px;
+                min-height: 120px;
+                background-color: {colors['input_bg']};
+                border: 1px solid {colors['border']};
+                border-radius: 3px;
+                color: {colors['foreground']};
+            }}
+            QListWidget::item {{
+                padding: 4px;
+                border-bottom: 1px solid {colors['border']};
+            }}
+            QListWidget::item:selected {{
+                background-color: {colors['accent']};
+                color: white;
+            }}
+            QLabel {{
+                font-size: 9pt;
+                color: {colors['foreground']};
+            }}
+            QGroupBox {{
+                font-size: 9pt;
+                font-weight: bold;
+                border: 1px solid {colors['border']};
+                border-radius: 5px;
+                margin-top: 10px;
+                padding-top: 5px;
+                color: {colors['foreground']};
+            }}
+            QGroupBox::title {{
+                subcontrol-origin: margin;
+                left: 10px;
+                padding: 0 5px 0 5px;
+                color: {colors['foreground']};
+            }}
+            QWidget {{
+                color: {colors['foreground']};
+                background-color: {colors['background']};
+            }}
+        """
+        
+        self.setStyleSheet(main_style)
+        
+        # Update individual labels with theme-appropriate colors
+        self.state_label.setStyleSheet(f'font-weight: bold; font-size: 11pt; color: {colors["accent"]};')
+        
+        # Update resource labels
+        self.memory_label.setStyleSheet(f'font-size: 9pt; color: {colors["text_light"]};')
+        self.cpu_label.setStyleSheet(f'font-size: 9pt; color: {colors["text_light"]};')
+        self.system_memory_label.setStyleSheet(f'font-size: 9pt; color: {colors["text_light"]};')
+        self.cache_label.setStyleSheet(f'font-size: 9pt; color: {colors["text_light"]};')
+        self.gpu_label.setStyleSheet(f'font-size: 9pt; color: {colors["text_light"]};')
+        self.performance_label.setStyleSheet(f'font-size: 9pt; color: {colors["text_light"]};')
+        self.interval_label.setStyleSheet(f'font-size: 9pt; color: {colors["text_light"]};')
+    
+    def _update_theme_button_text(self):
+        """
+        Update the theme button text based on current theme mode.
+        """
+        if self.theme_mode == 'system':
+            system_dark = self.is_system_dark_theme()
+            theme_text = f"System ({'Dark' if system_dark else 'Light'})"
+        elif self.theme_mode == 'light':
+            theme_text = "Light"
+        else:  # dark
+            theme_text = "Dark"
+        
+        if hasattr(self, 'btn_theme'):
+            self.btn_theme.setText(theme_text)
+    
+    def toggle_theme(self):
+        """
+        Cycle through theme modes: System -> Light -> Dark -> System...
+        """
+        if self.theme_mode == 'system':
+            self.theme_mode = 'light'
+        elif self.theme_mode == 'light':
+            self.theme_mode = 'dark'
+        else:  # dark
+            self.theme_mode = 'system'
+        
+        # Start/stop theme monitoring based on mode
+        if self.theme_mode == 'system':
+            self._last_system_theme = self.is_system_dark_theme()
+            if hasattr(self, 'theme_monitor_timer'):
+                self.theme_monitor_timer.start(5000)  # Check every 5 seconds
+        else:
+            if hasattr(self, 'theme_monitor_timer'):
+                self.theme_monitor_timer.stop()
+        
+        self.apply_theme()
+        self._update_theme_button_text()
+        
+        logger.info(f'Theme changed to: {self.theme_mode} mode')
+
     def init_ui(self):
         """
         Initializes the main UI components and layouts.
         Sets up scenario and window dropdowns, step list, and action buttons.
         """
-        # Set compact font and style
+        # Set compact font
         font = QtGui.QFont()
         font.setPointSize(9)
         self.setFont(font)
-        style = """
-            QPushButton, QComboBox, QListWidget, QLabel {
-                font-size: 9pt;
-                min-height: 20px;
-                padding: 2px 6px;
-            }
-            QComboBox { min-width: 90px; }
-            QPushButton { min-width: 70px; }
-            QListWidget { min-width: 200px; min-height: 120px; }
-        """
-        self.setStyleSheet(style)
 
         # Scenario group (QGroupBox with title 'Scenario')
         scenario_group_box = QtWidgets.QGroupBox('Scenario')
@@ -1898,9 +2217,14 @@ class MainWindow(QtWidgets.QMainWindow):
         self.btn_start_stop.setMinimumWidth(80)
         self.btn_start_stop.clicked.connect(self._log_btn_start_stop)
 
+        # Theme toggle button
+        self.btn_theme = QtWidgets.QPushButton('System')
+        self.btn_theme.setMinimumWidth(80)
+        self.btn_theme.setToolTip('Cycle through theme modes: System (follows OS) -> Light -> Dark -> System...')
+        self.btn_theme.clicked.connect(self.toggle_theme)
+
         # State label
         self.state_label = QtWidgets.QLabel('State: Paused')
-        self.state_label.setStyleSheet('font-weight: bold; font-size: 11pt; color: #0055aa;')
         self.state_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignLeft | QtCore.Qt.AlignmentFlag.AlignVCenter)
 
         # Resource usage display
@@ -1912,32 +2236,26 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # Memory usage
         self.memory_label = QtWidgets.QLabel('Memory: --')
-        self.memory_label.setStyleSheet('font-size: 9pt; color: #333;')
         resource_layout.addWidget(self.memory_label, 0, 0)
 
         # CPU usage
         self.cpu_label = QtWidgets.QLabel('CPU: --')
-        self.cpu_label.setStyleSheet('font-size: 9pt; color: #333;')
         resource_layout.addWidget(self.cpu_label, 0, 1)
 
         # System memory
         self.system_memory_label = QtWidgets.QLabel('System: --')
-        self.system_memory_label.setStyleSheet('font-size: 9pt; color: #333;')
         resource_layout.addWidget(self.system_memory_label, 1, 0)
 
         # Cache info
         self.cache_label = QtWidgets.QLabel('Cache: --')
-        self.cache_label.setStyleSheet('font-size: 9pt; color: #333;')
         resource_layout.addWidget(self.cache_label, 1, 1)
 
         # GPU memory info
         self.gpu_label = QtWidgets.QLabel('GPU: --')
-        self.gpu_label.setStyleSheet('font-size: 9pt; color: #333;')
         resource_layout.addWidget(self.gpu_label, 1, 2)
 
         # Performance info
         self.performance_label = QtWidgets.QLabel('Performance: --')
-        self.performance_label.setStyleSheet('font-size: 9pt; color: #333;')
         resource_layout.addWidget(self.performance_label, 2, 0, 1, 3)
 
         # Controls row (toggle button and update interval) - placed in a separate row
@@ -1949,7 +2267,6 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # Update interval controls
         self.interval_label = QtWidgets.QLabel('Update:')
-        self.interval_label.setStyleSheet('font-size: 9pt; color: #333;')
         self.update_interval_combo = QtWidgets.QComboBox()
         self.update_interval_combo.setMaximumWidth(80)
         self.update_interval_combo.setToolTip('Set resource monitoring update interval')
@@ -1998,8 +2315,9 @@ class MainWindow(QtWidgets.QMainWindow):
         start_state_group.setTitle("")
         start_state_group.setSizePolicy(QtWidgets.QSizePolicy.Policy.Preferred, QtWidgets.QSizePolicy.Policy.Fixed)
         start_state_layout = QtWidgets.QHBoxLayout()
-        start_state_layout.setSpacing(6)  # Fixed gap between button and label
+        start_state_layout.setSpacing(6)  # Fixed gap between elements
         start_state_layout.addWidget(self.btn_start_stop)
+        start_state_layout.addWidget(self.btn_theme)
         start_state_layout.addWidget(self.state_label)
         start_state_layout.addStretch(1)
         start_state_group.setLayout(start_state_layout)
@@ -2010,6 +2328,10 @@ class MainWindow(QtWidgets.QMainWindow):
         central = QtWidgets.QWidget()
         central.setLayout(layout)
         self.setCentralWidget(central)
+        
+        # Apply initial theme and set button text
+        self.apply_theme()
+        self._update_theme_button_text()
 
     def _log_btn_refresh_windows(self):
         logger.info("UI: Refresh Windows button pressed")
