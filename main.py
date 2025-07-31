@@ -51,13 +51,7 @@ def get_gpu_memory_info():
     Returns dict with GPU memory info or basic info if no GPU found.
     Uses caching to prevent repeated expensive system calls.
     """
-    # Import modules at function level to avoid scope issues
-    import json
-    import subprocess
-    import platform
-    import os
-    
-    # Cache GPU info for 30 seconds to prevent UI hanging
+    # Return cached info immediately if available and recent
     current_time = time.time()
     cache_duration = 30  # seconds
     
@@ -65,6 +59,151 @@ def get_gpu_memory_info():
         hasattr(get_gpu_memory_info, '_cache_time') and
         current_time - get_gpu_memory_info._cache_time < cache_duration):
         return get_gpu_memory_info._cached_info
+    
+    # If we're already updating in background, return cached or default
+    if hasattr(get_gpu_memory_info, '_updating') and get_gpu_memory_info._updating:
+        return getattr(get_gpu_memory_info, '_cached_info', 
+                      {'has_gpu': False, 'total_mb': 0, 'used_mb': 0, 'free_mb': 0, 
+                       'utilization_percent': 0, 'gpu_name': 'Loading...', 'method': 'loading'})
+    
+    # Start background update
+    get_gpu_memory_info._updating = True
+    
+    def update_gpu_info():
+        """Background thread function to update GPU info."""
+        import json
+        import subprocess
+        import platform
+        import os
+        
+        gpu_info = {'has_gpu': False, 'total_mb': 0, 'used_mb': 0, 'free_mb': 0, 'utilization_percent': 0, 'gpu_name': 'Unknown'}
+        
+        try:
+            # Try nvidia-ml-py (NVIDIA GPUs - most detailed info)
+            try:
+                import pynvml
+                pynvml.nvmlInit()
+                handle = pynvml.nvmlDeviceGetHandleByIndex(0)  # Get first GPU
+                
+                # Get memory info
+                mem_info = pynvml.nvmlDeviceGetMemoryInfo(handle)
+                total_mb = mem_info.total / 1024 / 1024
+                used_mb = mem_info.used / 1024 / 1024
+                free_mb = mem_info.free / 1024 / 1024
+                utilization_percent = (used_mb / total_mb) * 100
+                
+                # Get GPU name
+                gpu_name = pynvml.nvmlDeviceGetName(handle).decode('utf-8')
+                
+                gpu_info.update({
+                    'has_gpu': True,
+                    'total_mb': total_mb,
+                    'used_mb': used_mb,
+                    'free_mb': free_mb,
+                    'utilization_percent': utilization_percent,
+                    'gpu_name': gpu_name,
+                    'method': 'pynvml'
+                })
+                
+                # Cache the result and mark as not updating
+                get_gpu_memory_info._cached_info = gpu_info
+                get_gpu_memory_info._cache_time = time.time()
+                get_gpu_memory_info._updating = False
+                return
+                
+            except (ImportError, Exception):
+                pass
+            
+            # Try GPUtil (NVIDIA GPUs alternative)
+            try:
+                import GPUtil
+                gpus = GPUtil.getGPUs()
+                if gpus:
+                    gpu = gpus[0]  # Get first GPU
+                    total_mb = gpu.memoryTotal
+                    used_mb = gpu.memoryUsed
+                    free_mb = gpu.memoryFree
+                    utilization_percent = (used_mb / total_mb) * 100
+                    
+                    gpu_info.update({
+                        'has_gpu': True,
+                        'total_mb': total_mb,
+                        'used_mb': used_mb,
+                        'free_mb': free_mb,
+                        'utilization_percent': utilization_percent,
+                        'gpu_name': gpu.name,
+                        'method': 'GPUtil'
+                    })
+                    
+                    # Cache the result and mark as not updating
+                    get_gpu_memory_info._cached_info = gpu_info
+                    get_gpu_memory_info._cache_time = time.time()
+                    get_gpu_memory_info._updating = False
+                    return
+                    
+            except (ImportError, Exception):
+                pass
+            
+            # Try Windows-specific methods with very short timeouts
+            try:
+                # Try nvidia-smi command for NVIDIA GPUs
+                try:
+                    result = subprocess.run(['nvidia-smi', '--query-gpu=name,memory.total,memory.used,memory.free', '--format=csv,noheader,nounits'], 
+                                          capture_output=True, text=True, timeout=1)  # Very short timeout
+                    
+                    if result.returncode == 0 and result.stdout.strip():
+                        lines = result.stdout.strip().split('\n')
+                        if lines:
+                            parts = lines[0].split(', ')
+                            if len(parts) >= 4:
+                                gpu_name = parts[0].strip()
+                                total_mb = float(parts[1].strip())
+                                used_mb = float(parts[2].strip())
+                                free_mb = float(parts[3].strip())
+                                utilization_percent = (used_mb / total_mb) * 100
+                                
+                                gpu_info.update({
+                                    'has_gpu': True,
+                                    'total_mb': total_mb,
+                                    'used_mb': used_mb,
+                                    'free_mb': free_mb,
+                                    'utilization_percent': utilization_percent,
+                                    'gpu_name': gpu_name,
+                                    'method': 'nvidia-smi'
+                                })
+                                
+                                # Cache the result and mark as not updating
+                                get_gpu_memory_info._cached_info = gpu_info
+                                get_gpu_memory_info._cache_time = time.time()
+                                get_gpu_memory_info._updating = False
+                                return
+                                
+                except (subprocess.TimeoutExpired, subprocess.CalledProcessError, FileNotFoundError):
+                    pass
+                
+                # Skip expensive WMI calls for now to prevent hanging
+                # These can be re-enabled later if needed, but with proper threading
+                
+            except Exception:
+                pass
+            
+        except Exception:
+            pass
+        finally:
+            # Always mark as not updating and cache result
+            get_gpu_memory_info._cached_info = gpu_info
+            get_gpu_memory_info._cache_time = time.time()
+            get_gpu_memory_info._updating = False
+    
+    # Start background thread for GPU detection
+    import threading
+    gpu_thread = threading.Thread(target=update_gpu_info, daemon=True)
+    gpu_thread.start()
+    
+    # Return cached info if available, otherwise return loading state
+    return getattr(get_gpu_memory_info, '_cached_info', 
+                  {'has_gpu': False, 'total_mb': 0, 'used_mb': 0, 'free_mb': 0, 
+                   'utilization_percent': 0, 'gpu_name': 'Loading...', 'method': 'loading'})
     
     gpu_info = {'has_gpu': False, 'total_mb': 0, 'used_mb': 0, 'free_mb': 0, 'utilization_percent': 0, 'gpu_name': 'Unknown'}
     
@@ -1017,12 +1156,12 @@ class MainWindow(QtWidgets.QMainWindow):
             # Get system info
             system_memory = psutil.virtual_memory()
             
-            # Get GPU information with error handling (no timeout needed due to caching)
+            # Get GPU information with error handling (non-blocking)
             try:
                 gpu_info = get_gpu_memory_info()
             except Exception as e:
                 logger.debug(f"GPU detection failed: {e}")
-                gpu_info = {'has_gpu': False, 'total_mb': 0, 'used_mb': 0, 'free_mb': 0, 'utilization_percent': 0, 'gpu_name': 'Error'}
+                gpu_info = {'has_gpu': False, 'total_mb': 0, 'used_mb': 0, 'free_mb': 0, 'utilization_percent': 0, 'gpu_name': 'Error', 'method': 'error'}
             
             return {
                 'process_memory_mb': memory_info.rss / 1024 / 1024,  # MB
@@ -1043,13 +1182,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 'gpu_method': gpu_info.get('method', 'none')
             }
         except ImportError:
-            # psutil not available, get GPU info anyway with error handling
-            try:
-                gpu_info = get_gpu_memory_info()
-            except Exception as e:
-                logger.debug(f"GPU detection failed without psutil: {e}")
-                gpu_info = {'has_gpu': False, 'total_mb': 0, 'used_mb': 0, 'free_mb': 0, 'utilization_percent': 0, 'gpu_name': 'Error'}
-            
+            # psutil not available, minimal info without GPU detection to prevent hanging
             return {
                 'process_memory_mb': 0,
                 'process_memory_percent': 0,
@@ -1059,24 +1192,18 @@ class MainWindow(QtWidgets.QMainWindow):
                 'template_cache_size': len(template_cache._cache) if hasattr(template_cache, '_cache') else 0,
                 'cooldown_entries': len(self._step_cooldown) if hasattr(self, '_step_cooldown') else 0,
                 'has_psutil': False,
-                # GPU information
-                'gpu_has_gpu': gpu_info['has_gpu'],
-                'gpu_total_mb': gpu_info['total_mb'],
-                'gpu_used_mb': gpu_info['used_mb'],
-                'gpu_free_mb': gpu_info['free_mb'],
-                'gpu_utilization_percent': gpu_info['utilization_percent'],
-                'gpu_name': gpu_info['gpu_name'],
-                'gpu_method': gpu_info.get('method', 'none')
+                # Minimal GPU info to prevent hanging
+                'gpu_has_gpu': False,
+                'gpu_total_mb': 0,
+                'gpu_used_mb': 0,
+                'gpu_free_mb': 0,
+                'gpu_utilization_percent': 0,
+                'gpu_name': 'psutil not available',
+                'gpu_method': 'disabled'
             }
         except Exception as e:
-            logger.warning(f"Error getting memory usage: {e}")
-            # Try to get GPU info even if psutil fails, with error handling
-            try:
-                gpu_info = get_gpu_memory_info()
-            except Exception as gpu_e:
-                logger.debug(f"GPU detection also failed: {gpu_e}")
-                gpu_info = {'has_gpu': False, 'total_mb': 0, 'used_mb': 0, 'free_mb': 0, 'utilization_percent': 0, 'gpu_name': 'Error'}
-            
+            logger.warning(f"Error getting memory usage (non-critical): {e}")
+            # Fallback minimal info to prevent hanging
             return {
                 'process_memory_mb': 0,
                 'process_memory_percent': 0,
@@ -1087,14 +1214,14 @@ class MainWindow(QtWidgets.QMainWindow):
                 'cooldown_entries': len(self._step_cooldown) if hasattr(self, '_step_cooldown') else 0,
                 'has_psutil': False,
                 'error': str(e),
-                # GPU information
-                'gpu_has_gpu': gpu_info['has_gpu'],
-                'gpu_total_mb': gpu_info['total_mb'],
-                'gpu_used_mb': gpu_info['used_mb'],
-                'gpu_free_mb': gpu_info['free_mb'],
-                'gpu_utilization_percent': gpu_info['utilization_percent'],
-                'gpu_name': gpu_info['gpu_name'],
-                'gpu_method': gpu_info.get('method', 'none')
+                # Minimal GPU info to prevent hanging
+                'gpu_has_gpu': False,
+                'gpu_total_mb': 0,
+                'gpu_used_mb': 0,
+                'gpu_free_mb': 0,
+                'gpu_utilization_percent': 0,
+                'gpu_name': 'Error occurred',
+                'gpu_method': 'error'
             }
 
     def stop_automation(self):
@@ -1178,22 +1305,37 @@ class MainWindow(QtWidgets.QMainWindow):
         # Setup cleanup on close
         self.setAttribute(QtCore.Qt.WidgetAttribute.WA_DeleteOnClose)
         
-        # Setup periodic monitoring timer
+        # Setup periodic monitoring timer (disabled by default to prevent hanging)
         self.monitor_timer = QtCore.QTimer()
         self.monitor_timer.timeout.connect(self._monitor_performance)
         
-        # Get initial interval from dropdown (default is 2 seconds)
-        initial_interval = self.update_interval_combo.currentData() or 2000
-        self.monitor_timer.start(initial_interval)
+        # Start with resource monitoring disabled to prevent startup hanging
+        self.resource_monitoring_enabled = False
         
-        # Initial resource display update
-        QtCore.QTimer.singleShot(100, self._monitor_performance)
+        # Initial resource display update (delayed to prevent startup hanging)
+        QtCore.QTimer.singleShot(2000, self._enable_resource_monitoring)
+    
+    def _enable_resource_monitoring(self):
+        """Enable resource monitoring after startup delay."""
+        if not hasattr(self, 'resource_monitoring_enabled') or not self.resource_monitoring_enabled:
+            self.resource_monitoring_enabled = True
+            
+            # Get initial interval from dropdown (default is 2 seconds)
+            initial_interval = self.update_interval_combo.currentData() or 2000
+            self.monitor_timer.start(initial_interval)
+            
+            # Initial resource display update
+            self._monitor_performance()
     
     def _monitor_performance(self):
         """
         Monitor application performance and memory usage.
         Uses error handling to prevent UI hanging.
         """
+        # Check if monitoring is enabled
+        if not getattr(self, 'resource_monitoring_enabled', False):
+            return
+            
         try:
             # Add timeout protection for memory info gathering
             memory_info = self.get_memory_usage()
@@ -1313,11 +1455,12 @@ class MainWindow(QtWidgets.QMainWindow):
             self.cache_label.setStyleSheet(f'font-size: 9pt; color: {cache_color};')
             
             # GPU memory info
+            gpu_method = memory_info.get('gpu_method', 'unknown')
+            
             if memory_info.get('gpu_has_gpu', False):
                 gpu_used_mb = memory_info.get('gpu_used_mb', 0)
                 gpu_total_mb = memory_info.get('gpu_total_mb', 0)
                 gpu_utilization = memory_info.get('gpu_utilization_percent', 0)
-                gpu_method = memory_info.get('gpu_method', 'unknown')
                 
                 if gpu_total_mb > 0:
                     gpu_text = f"GPU: {gpu_used_mb:.0f}/{gpu_total_mb:.0f}MB ({gpu_utilization:.1f}%)"
@@ -1331,6 +1474,10 @@ class MainWindow(QtWidgets.QMainWindow):
                     gpu_color = '#5bc0de'
                     gpu_name = memory_info.get('gpu_name', 'Unknown GPU')
                     self.gpu_label.setToolTip(f"GPU: {gpu_name} (limited info via {gpu_method})")
+            elif gpu_method == 'loading':
+                gpu_text = "GPU: Loading..."
+                gpu_color = '#f0ad4e'
+                self.gpu_label.setToolTip("GPU detection in progress...")
             else:
                 gpu_text = "GPU: Not detected"
                 gpu_color = '#777'
@@ -1347,12 +1494,12 @@ class MainWindow(QtWidgets.QMainWindow):
             self.gpu_label.setText(gpu_text)
             self.gpu_label.setStyleSheet(f'font-size: 9pt; color: {gpu_color};')
             
-            # Make GPU label clickable to show GPU info when no GPU detected
-            if not memory_info.get('gpu_has_gpu', False):
+            # Make GPU label clickable to show GPU info when no GPU detected or loading
+            if not memory_info.get('gpu_has_gpu', False) and gpu_method != 'loading':
                 self.gpu_label.mousePressEvent = lambda event: self._show_gpu_info()
                 self.gpu_label.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCursor))
             else:
-                # Remove click handler if GPU is detected
+                # Remove click handler if GPU is detected or loading
                 self.gpu_label.mousePressEvent = None
                 self.gpu_label.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.ArrowCursor))
             
