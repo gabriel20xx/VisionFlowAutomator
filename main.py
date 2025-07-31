@@ -2094,8 +2094,19 @@ class MainWindow(QtWidgets.QMainWindow):
                         if result == 0:  # S_OK
                             logger.debug(f"Applied Windows {'dark' if enable_dark else 'light'} title bar ({'newer' if use_newer_api else 'legacy'} API)")
                             
-                            # Force window to redraw
+                            # Force immediate window redraw using multiple methods
                             self.update()
+                            self.repaint()
+                            
+                            # Force a window refresh by briefly changing and restoring window flags
+                            try:
+                                original_flags = self.windowFlags()
+                                self.setWindowFlags(original_flags | QtCore.Qt.WindowType.WindowStaysOnTopHint)
+                                self.setWindowFlags(original_flags)
+                                self.show()
+                            except:
+                                pass
+                            
                             return True
                         else:
                             logger.debug(f"Windows title bar API returned error code: {result}")
@@ -2115,6 +2126,17 @@ class MainWindow(QtWidgets.QMainWindow):
                             if result == 0:
                                 logger.debug(f"Applied Windows {'dark' if enable_dark else 'light'} title bar (fallback API)")
                                 self.update()
+                                self.repaint()
+                                
+                                # Force window refresh
+                                try:
+                                    original_flags = self.windowFlags()
+                                    self.setWindowFlags(original_flags | QtCore.Qt.WindowType.WindowStaysOnTopHint)
+                                    self.setWindowFlags(original_flags)
+                                    self.show()
+                                except:
+                                    pass
+                                
                                 return True
                         except Exception as fallback_e:
                             logger.debug(f"Windows dark title bar fallback failed: {fallback_e}")
@@ -2171,17 +2193,36 @@ class MainWindow(QtWidgets.QMainWindow):
         colors = self.get_theme_styles()
         is_dark = self.get_effective_dark_mode()
         
-        # Apply title bar theming with multiple attempts to ensure it takes effect
-        def apply_title_bar_theming():
-            success = self.apply_dark_title_bar(is_dark)
-            if not success:
-                # Retry after a longer delay if first attempt failed
-                QtCore.QTimer.singleShot(100, lambda: self.apply_dark_title_bar(is_dark))
+        # Apply title bar theming immediately
+        self.apply_dark_title_bar(is_dark)
         
-        # Apply immediately and with delays to handle different timing scenarios
-        apply_title_bar_theming()
-        QtCore.QTimer.singleShot(50, apply_title_bar_theming)
-        QtCore.QTimer.singleShot(200, apply_title_bar_theming)
+        # Also apply to any open dialogs immediately
+        for dialog in QtWidgets.QApplication.allWidgets():
+            if isinstance(dialog, QtWidgets.QDialog) and dialog.isVisible():
+                try:
+                    hwnd = int(dialog.winId())
+                    if hwnd:
+                        import ctypes
+                        DWMWA_USE_IMMERSIVE_DARK_MODE = 20
+                        DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1 = 19
+                        
+                        # Try both API versions
+                        for attribute in [DWMWA_USE_IMMERSIVE_DARK_MODE, DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1]:
+                            try:
+                                result = ctypes.windll.dwmapi.DwmSetWindowAttribute(
+                                    hwnd,
+                                    attribute,
+                                    ctypes.byref(ctypes.c_int(1 if is_dark else 0)),
+                                    ctypes.sizeof(ctypes.c_int)
+                                )
+                                if result == 0:
+                                    dialog.update()
+                                    dialog.repaint()
+                                    break
+                            except:
+                                continue
+                except:
+                    pass
         
         # Main window style
         main_style = f"""
@@ -2234,13 +2275,17 @@ class MainWindow(QtWidgets.QMainWindow):
             QComboBox::drop-down {{
                 border: none;
                 width: 20px;
+                subcontrol-origin: padding;
+                subcontrol-position: center right;
             }}
             QComboBox::down-arrow {{
                 image: none;
-                border-left: 4px solid transparent;
-                border-right: 4px solid transparent;
-                border-top: 4px solid {colors['foreground']};
-                margin: 0px 4px 0px 4px;
+                width: 0;
+                height: 0;
+                border-left: 5px solid transparent;
+                border-right: 5px solid transparent;
+                border-top: 6px solid {colors['foreground']};
+                margin: 0px;
             }}
             QListWidget {{
                 font-size: 9pt;
@@ -2328,6 +2373,39 @@ class MainWindow(QtWidgets.QMainWindow):
             # Apply title bar theming immediately for theme changes
             is_dark = self.get_effective_dark_mode()
             self.apply_dark_title_bar(is_dark)
+            
+            # Also apply to any open dialogs immediately
+            for dialog in QtWidgets.QApplication.allWidgets():
+                if isinstance(dialog, QtWidgets.QDialog) and dialog.isVisible():
+                    try:
+                        hwnd = int(dialog.winId())
+                        if hwnd:
+                            import ctypes
+                            DWMWA_USE_IMMERSIVE_DARK_MODE = 20
+                            DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1 = 19
+                            
+                            # Try both API versions
+                            for attribute in [DWMWA_USE_IMMERSIVE_DARK_MODE, DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1]:
+                                try:
+                                    result = ctypes.windll.dwmapi.DwmSetWindowAttribute(
+                                        hwnd,
+                                        attribute,
+                                        ctypes.byref(ctypes.c_int(1 if is_dark else 0)),
+                                        ctypes.sizeof(ctypes.c_int)
+                                    )
+                                    if result == 0:
+                                        dialog.update()
+                                        dialog.repaint()
+                                        break
+                                except:
+                                    continue
+                    except:
+                        pass
+            
+            # Force an immediate application repaint for instant visual feedback
+            QtWidgets.QApplication.processEvents()
+            self.update()
+            self.repaint()
             
             # Save the theme preference immediately
             self._save_window_geometry()
@@ -2457,11 +2535,32 @@ class MainWindow(QtWidgets.QMainWindow):
         self.theme_combo.setMinimumWidth(100)
         self.theme_combo.setMaximumWidth(120)
         self.theme_combo.setToolTip('Select theme: System (follows OS), Light, or Dark')
+        
+        # Make the theme dropdown open upwards by setting a custom style
+        # This will be handled in the theme application
+        
         self.theme_combo.addItem('System', 'system')
         self.theme_combo.addItem('Light', 'light')
         self.theme_combo.addItem('Dark', 'dark')
         self.theme_combo.setCurrentText('System')  # Default to system
         self.theme_combo.currentTextChanged.connect(self.on_theme_changed)
+        
+        # Make theme dropdown open upwards
+        def showPopupUpwards():
+            # Get the combo box position and size
+            combo_rect = self.theme_combo.geometry()
+            popup = self.theme_combo.view()
+            popup_height = popup.sizeHint().height()
+            
+            # Calculate position above the combo box
+            global_pos = self.theme_combo.mapToGlobal(QtCore.QPoint(0, -popup_height))
+            
+            # Show the popup at the calculated position
+            popup.setGeometry(global_pos.x(), global_pos.y(), combo_rect.width(), popup_height)
+            popup.show()
+        
+        # Override the showPopup method to make it open upwards
+        self.theme_combo.showPopup = showPopupUpwards
 
         # State label
         self.state_label = QtWidgets.QLabel('State: Paused')
