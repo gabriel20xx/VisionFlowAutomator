@@ -1412,12 +1412,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.apply_theme()
         self._update_theme_combo_text()
         
-        # Apply title bar theming with multiple attempts to ensure it works
+        # Apply title bar theming once more to ensure it takes effect
         is_dark = self.get_effective_dark_mode()
         self.apply_dark_title_bar(is_dark)
-        QtCore.QTimer.singleShot(100, lambda: self.apply_dark_title_bar(is_dark))
-        QtCore.QTimer.singleShot(300, lambda: self.apply_dark_title_bar(is_dark))
-        QtCore.QTimer.singleShot(1000, lambda: self.apply_dark_title_bar(is_dark))
         
         # Start theme monitoring if in system mode
         if self.theme_mode == 'system':
@@ -1866,11 +1863,9 @@ class MainWindow(QtWidgets.QMainWindow):
     def showEvent(self, event):
         """Handle window show event to ensure title bar theming is applied."""
         super().showEvent(event)
-        # Apply title bar theming when window is shown with multiple attempts
+        # Apply title bar theming when window is shown (once only)
         is_dark = self.get_effective_dark_mode()
         QtCore.QTimer.singleShot(50, lambda: self.apply_dark_title_bar(is_dark))
-        QtCore.QTimer.singleShot(150, lambda: self.apply_dark_title_bar(is_dark))
-        QtCore.QTimer.singleShot(300, lambda: self.apply_dark_title_bar(is_dark))
     
     def changeEvent(self, event):
         """Handle window state changes (maximize/minimize)."""
@@ -2094,18 +2089,9 @@ class MainWindow(QtWidgets.QMainWindow):
                         if result == 0:  # S_OK
                             logger.debug(f"Applied Windows {'dark' if enable_dark else 'light'} title bar ({'newer' if use_newer_api else 'legacy'} API)")
                             
-                            # Force immediate window redraw using multiple methods
+                            # Force immediate window redraw
                             self.update()
                             self.repaint()
-                            
-                            # Force a window refresh by briefly changing and restoring window flags
-                            try:
-                                original_flags = self.windowFlags()
-                                self.setWindowFlags(original_flags | QtCore.Qt.WindowType.WindowStaysOnTopHint)
-                                self.setWindowFlags(original_flags)
-                                self.show()
-                            except:
-                                pass
                             
                             return True
                         else:
@@ -2127,15 +2113,6 @@ class MainWindow(QtWidgets.QMainWindow):
                                 logger.debug(f"Applied Windows {'dark' if enable_dark else 'light'} title bar (fallback API)")
                                 self.update()
                                 self.repaint()
-                                
-                                # Force window refresh
-                                try:
-                                    original_flags = self.windowFlags()
-                                    self.setWindowFlags(original_flags | QtCore.Qt.WindowType.WindowStaysOnTopHint)
-                                    self.setWindowFlags(original_flags)
-                                    self.show()
-                                except:
-                                    pass
                                 
                                 return True
                         except Exception as fallback_e:
