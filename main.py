@@ -2482,6 +2482,10 @@ class MainWindow(QtWidgets.QMainWindow):
         self.cpu_label = QtWidgets.QLabel('CPU: --')
         resource_layout.addWidget(self.cpu_label, 0, 1)
 
+        # GPU memory info (moved up)
+        self.gpu_label = QtWidgets.QLabel('GPU: --')
+        resource_layout.addWidget(self.gpu_label, 0, 2)
+
         # System memory
         self.system_memory_label = QtWidgets.QLabel('System: --')
         resource_layout.addWidget(self.system_memory_label, 1, 0)
@@ -2490,21 +2494,15 @@ class MainWindow(QtWidgets.QMainWindow):
         self.cache_label = QtWidgets.QLabel('Cache: --')
         resource_layout.addWidget(self.cache_label, 1, 1)
 
-        # GPU memory info
-        self.gpu_label = QtWidgets.QLabel('GPU: --')
-        resource_layout.addWidget(self.gpu_label, 1, 2)
-
-        # Performance info
+        # Performance info (moved down)
         self.performance_label = QtWidgets.QLabel('Performance: --')
-        resource_layout.addWidget(self.performance_label, 2, 0, 1, 3)
+        resource_layout.addWidget(self.performance_label, 1, 2)
 
-        # Controls row - Update interval group
-        interval_group = QtWidgets.QGroupBox('Update Interval')
-        interval_group.setSizePolicy(QtWidgets.QSizePolicy.Policy.Preferred, QtWidgets.QSizePolicy.Policy.Fixed)
-        interval_layout = QtWidgets.QHBoxLayout()
-        interval_layout.setContentsMargins(4, 4, 4, 4)
-        interval_layout.setSpacing(4)
+        # Controls row - Update interval controls (no border, like theme controls)
+        update_interval_layout = QtWidgets.QHBoxLayout()
+        update_interval_layout.setSpacing(6)
         
+        self.update_interval_label = QtWidgets.QLabel('Update Interval:')
         self.update_interval_combo = QtWidgets.QComboBox()
         self.update_interval_combo.setMaximumWidth(80)
         self.update_interval_combo.setToolTip('Set resource monitoring update interval')
@@ -2526,12 +2524,12 @@ class MainWindow(QtWidgets.QMainWindow):
         self.update_interval_combo.setCurrentIndex(2)
         self.update_interval_combo.currentIndexChanged.connect(self._on_update_interval_changed)
         
-        interval_layout.addWidget(self.update_interval_combo)
-        interval_layout.addStretch(1)
-        interval_group.setLayout(interval_layout)
+        update_interval_layout.addWidget(self.update_interval_label)
+        update_interval_layout.addWidget(self.update_interval_combo)
+        update_interval_layout.addStretch(1)
         
-        # Add controls to layout - update interval group spans full width
-        resource_layout.addWidget(interval_group, 3, 0, 1, 2)
+        # Add controls to layout - update interval controls span full width
+        resource_layout.addLayout(update_interval_layout, 2, 0, 1, 3)
 
         self.resource_group.setLayout(resource_layout)
 
