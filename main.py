@@ -812,6 +812,227 @@ def take_screenshot_with_tkinter():
     
     return selection_rect
 
+
+class SettingsDialog(QtWidgets.QDialog):
+    """
+    Settings dialog for application configuration.
+    """
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.parent_window = parent
+        self.setWindowTitle('Settings')
+        self.setModal(True)
+        self.setFixedSize(400, 300)
+        
+        # Apply the same theme as parent window
+        if parent:
+            colors = parent.get_theme_styles()
+            self.setStyleSheet(f"""
+                QDialog {{
+                    background-color: {colors['background']};
+                    color: {colors['foreground']};
+                }}
+                QGroupBox {{
+                    font-size: 9pt;
+                    font-weight: bold;
+                    border: 1px solid {colors['border']};
+                    border-radius: 5px;
+                    margin-top: 10px;
+                    padding-top: 5px;
+                    color: {colors['foreground']};
+                }}
+                QGroupBox::title {{
+                    subcontrol-origin: margin;
+                    left: 10px;
+                    padding: 0 5px 0 5px;
+                    color: {colors['foreground']};
+                }}
+                QLabel {{
+                    font-size: 9pt;
+                    color: {colors['foreground']};
+                }}
+                QComboBox {{
+                    font-size: 9pt;
+                    min-height: 20px;
+                    padding: 2px 6px;
+                    min-width: 90px;
+                    background-color: {colors['input_bg']};
+                    border: 1px solid {colors['border']};
+                    border-radius: 3px;
+                    color: {colors['foreground']};
+                }}
+                QComboBox::drop-down {{
+                    border: none;
+                    width: 20px;
+                    subcontrol-origin: padding;
+                    subcontrol-position: center right;
+                }}
+                QComboBox::down-arrow {{
+                    image: none;
+                    width: 0;
+                    height: 0;
+                    border-left: 5px solid transparent;
+                    border-right: 5px solid transparent;
+                    border-top: 6px solid {colors['foreground']};
+                    margin: 0px;
+                }}
+                QPushButton {{
+                    font-size: 9pt;
+                    min-height: 20px;
+                    padding: 2px 4px;
+                    min-width: 70px;
+                    background-color: {colors['button_bg']};
+                    border: 1px solid {colors['border']};
+                    border-radius: 3px;
+                    color: {colors['foreground']};
+                }}
+                QPushButton:hover {{
+                    background-color: {colors['button_hover']};
+                }}
+                QPushButton:pressed {{
+                    background-color: {colors['border']};
+                }}
+            """)
+        
+        self.init_ui()
+    
+    def init_ui(self):
+        """Initialize the settings dialog UI."""
+        layout = QtWidgets.QVBoxLayout()
+        layout.setSpacing(10)
+        layout.setContentsMargins(15, 15, 15, 15)
+        
+        # Appearance settings group
+        appearance_group = QtWidgets.QGroupBox('Appearance')
+        appearance_layout = QtWidgets.QFormLayout()
+        appearance_layout.setSpacing(8)
+        
+        # Theme setting
+        self.theme_combo = QtWidgets.QComboBox()
+        self.theme_combo.setMinimumWidth(120)
+        self.theme_combo.setToolTip('Select theme: System (follows OS), Light, or Dark')
+        self.theme_combo.addItem('System', 'system')
+        self.theme_combo.addItem('Light', 'light')
+        self.theme_combo.addItem('Dark', 'dark')
+        
+        # Set current theme
+        if self.parent_window:
+            theme_display_map = {'system': 'System', 'light': 'Light', 'dark': 'Dark'}
+            current_theme_display = theme_display_map.get(self.parent_window.theme_mode, 'System')
+            self.theme_combo.setCurrentText(current_theme_display)
+        
+        self.theme_combo.currentTextChanged.connect(self.on_theme_changed)
+        appearance_layout.addRow('Theme:', self.theme_combo)
+        
+        appearance_group.setLayout(appearance_layout)
+        layout.addWidget(appearance_group)
+        
+        # Logging settings group
+        logging_group = QtWidgets.QGroupBox('Logging')
+        logging_layout = QtWidgets.QFormLayout()
+        logging_layout.setSpacing(8)
+        
+        # Logging level setting
+        self.logging_combo = QtWidgets.QComboBox()
+        self.logging_combo.setMinimumWidth(120)
+        self.logging_combo.setToolTip('Set logging level: DEBUG shows all messages, ERROR shows only critical errors')
+        
+        logging_levels = [
+            ('DEBUG', logging.DEBUG),
+            ('INFO', logging.INFO),
+            ('WARNING', logging.WARNING),
+            ('ERROR', logging.ERROR),
+            ('CRITICAL', logging.CRITICAL)
+        ]
+        
+        for text, level in logging_levels:
+            self.logging_combo.addItem(text, level)
+        
+        # Set current logging level
+        if self.parent_window and hasattr(self.parent_window, 'logging_combo'):
+            current_index = self.parent_window.logging_combo.currentIndex()
+            self.logging_combo.setCurrentIndex(current_index)
+        else:
+            self.logging_combo.setCurrentIndex(1)  # Default to INFO
+        
+        self.logging_combo.currentTextChanged.connect(self.on_logging_level_changed)
+        logging_layout.addRow('Log Level:', self.logging_combo)
+        
+        logging_group.setLayout(logging_layout)
+        layout.addWidget(logging_group)
+        
+        # Resource monitoring settings group
+        monitoring_group = QtWidgets.QGroupBox('Resource Monitoring')
+        monitoring_layout = QtWidgets.QFormLayout()
+        monitoring_layout.setSpacing(8)
+        
+        # Update interval setting
+        self.update_interval_combo = QtWidgets.QComboBox()
+        self.update_interval_combo.setMinimumWidth(120)
+        self.update_interval_combo.setToolTip('Set resource monitoring update interval')
+        
+        intervals = [
+            ('0.5s', 500),
+            ('1s', 1000),
+            ('2s', 2000),
+            ('3s', 3000),
+            ('5s', 5000),
+            ('10s', 10000)
+        ]
+        
+        for text, value in intervals:
+            self.update_interval_combo.addItem(text, value)
+        
+        # Set current update interval
+        if self.parent_window and hasattr(self.parent_window, 'update_interval_combo'):
+            current_index = self.parent_window.update_interval_combo.currentIndex()
+            self.update_interval_combo.setCurrentIndex(current_index)
+        else:
+            self.update_interval_combo.setCurrentIndex(2)  # Default to 2s
+        
+        self.update_interval_combo.currentIndexChanged.connect(self.on_update_interval_changed)
+        monitoring_layout.addRow('Update Interval:', self.update_interval_combo)
+        
+        monitoring_group.setLayout(monitoring_layout)
+        layout.addWidget(monitoring_group)
+        
+        # Add stretch to push everything to the top
+        layout.addStretch()
+        
+        # Button layout
+        button_layout = QtWidgets.QHBoxLayout()
+        button_layout.addStretch()
+        
+        # Close button
+        self.close_btn = QtWidgets.QPushButton('Close')
+        self.close_btn.clicked.connect(self.accept)
+        button_layout.addWidget(self.close_btn)
+        
+        layout.addLayout(button_layout)
+        self.setLayout(layout)
+    
+    def on_theme_changed(self, theme_text):
+        """Handle theme change from settings dialog."""
+        if self.parent_window:
+            self.parent_window.on_theme_changed(theme_text)
+            # Update the dialog's theme immediately
+            colors = self.parent_window.get_theme_styles()
+            self.setStyleSheet(self.styleSheet())  # Re-apply stylesheet with new colors
+    
+    def on_logging_level_changed(self, level_text):
+        """Handle logging level change from settings dialog."""
+        if self.parent_window:
+            self.parent_window.on_logging_level_changed(level_text)
+    
+    def on_update_interval_changed(self):
+        """Handle update interval change from settings dialog."""
+        if self.parent_window:
+            # Sync the parent's combo box
+            parent_combo = self.parent_window.update_interval_combo
+            parent_combo.setCurrentIndex(self.update_interval_combo.currentIndex())
+            self.parent_window._on_update_interval_changed()
+
+
 class MainWindow(QtWidgets.QMainWindow):
     """
     Main application window for Scenario Image Automation.
@@ -1757,6 +1978,7 @@ class MainWindow(QtWidgets.QMainWindow):
             existing_config['main_window'] = geometry_data
             existing_config['update_interval'] = self.update_interval_combo.currentData()
             existing_config['theme_mode'] = self.theme_mode
+            existing_config['logging_level'] = self.logging_combo.currentData()
             
             with open(config_path, 'w') as f:
                 json.dump(existing_config, f, indent=2)
@@ -1826,6 +2048,24 @@ class MainWindow(QtWidgets.QMainWindow):
                 theme_display = theme_display_map.get(saved_theme, 'System')
                 self.theme_combo.setCurrentText(theme_display)
                 logger.debug(f"Restored theme mode: {saved_theme}")
+            
+            # Restore logging level if saved
+            saved_logging_level = config.get('logging_level')
+            if saved_logging_level is not None:
+                # Find the index of the saved logging level in the combo box
+                for i in range(self.logging_combo.count()):
+                    if self.logging_combo.itemData(i) == saved_logging_level:
+                        self.logging_combo.setCurrentIndex(i)
+                        # Apply the logging level immediately
+                        logger.setLevel(saved_logging_level)
+                        root_logger = logging.getLogger()
+                        root_logger.setLevel(saved_logging_level)
+                        for handler in logger.handlers:
+                            handler.setLevel(saved_logging_level)
+                        for handler in root_logger.handlers:
+                            handler.setLevel(saved_logging_level)
+                        break
+                logger.debug(f"Restored logging level: {saved_logging_level}")
             
             logger.debug(f"Restored window geometry: x={x}, y={y}, w={width}, h={height}")
             
@@ -2389,6 +2629,72 @@ class MainWindow(QtWidgets.QMainWindow):
             
             logger.info(f'Theme changed to: {self.theme_mode} mode')
     
+    def on_logging_level_changed(self, level_text):
+        """
+        Handle logging level dropdown selection change.
+        """
+        # Get the logging level value from the combo box
+        level_value = self.logging_combo.currentData()
+        
+        if level_value is not None:
+            # Apply the new logging level to the logger
+            logger.setLevel(level_value)
+            
+            # Also update the root logger level if it exists
+            root_logger = logging.getLogger()
+            root_logger.setLevel(level_value)
+            
+            # Update all handlers to use the new level
+            for handler in logger.handlers:
+                handler.setLevel(level_value)
+            
+            for handler in root_logger.handlers:
+                handler.setLevel(level_value)
+            
+            # Save the logging level preference
+            self._save_window_geometry()
+            
+            # Log the change (this will only show if the level allows it)
+            logger.info(f'Logging level changed to: {level_text} ({level_value})')
+            logger.debug(f'Debug logging is now {"enabled" if level_value <= logging.DEBUG else "disabled"}')
+    
+    def show_settings_dialog(self):
+        """
+        Show the settings dialog window.
+        """
+        try:
+            dialog = SettingsDialog(self)
+            
+            # Apply title bar theming to the dialog
+            is_dark = self.get_effective_dark_mode()
+            try:
+                hwnd = int(dialog.winId())
+                if hwnd:
+                    import ctypes
+                    DWMWA_USE_IMMERSIVE_DARK_MODE = 20
+                    DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1 = 19
+                    
+                    # Try both API versions
+                    for attribute in [DWMWA_USE_IMMERSIVE_DARK_MODE, DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1]:
+                        try:
+                            result = ctypes.windll.dwmapi.DwmSetWindowAttribute(
+                                hwnd,
+                                attribute,
+                                ctypes.byref(ctypes.c_int(1 if is_dark else 0)),
+                                ctypes.sizeof(ctypes.c_int)
+                            )
+                            if result == 0:  # S_OK
+                                break
+                        except:
+                            continue
+            except:
+                pass  # Ignore title bar theming errors
+            
+            dialog.exec()
+            
+        except Exception as e:
+            logger.error(f'Error showing settings dialog: {e}')
+    
     def _update_theme_combo_text(self):
         """
         Update the theme combo box text based on current theme mode and system state.
@@ -2516,38 +2822,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.btn_start_stop.setMinimumWidth(80)
         self.btn_start_stop.clicked.connect(self._log_btn_start_stop)
 
-        # Theme dropdown
-        self.theme_combo = QtWidgets.QComboBox()
-        self.theme_combo.setMinimumWidth(100)
-        self.theme_combo.setMaximumWidth(120)
-        self.theme_combo.setToolTip('Select theme: System (follows OS), Light, or Dark')
-        
-        # Make the theme dropdown open upwards by setting a custom style
-        # This will be handled in the theme application
-        
-        self.theme_combo.addItem('System', 'system')
-        self.theme_combo.addItem('Light', 'light')
-        self.theme_combo.addItem('Dark', 'dark')
-        self.theme_combo.setCurrentText('System')  # Default to system
-        self.theme_combo.currentTextChanged.connect(self.on_theme_changed)
-        
-        # Make theme dropdown open upwards
-        def showPopupUpwards():
-            # Get the combo box position and size
-            combo_rect = self.theme_combo.geometry()
-            popup = self.theme_combo.view()
-            popup_height = popup.sizeHint().height()
-            
-            # Calculate position above the combo box
-            global_pos = self.theme_combo.mapToGlobal(QtCore.QPoint(0, -popup_height))
-            
-            # Show the popup at the calculated position
-            popup.setGeometry(global_pos.x(), global_pos.y(), combo_rect.width(), popup_height)
-            popup.show()
-        
-        # Override the showPopup method to make it open upwards
-        self.theme_combo.showPopup = showPopupUpwards
-
         # State label
         self.state_label = QtWidgets.QLabel('State: Paused')
         self.state_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignLeft | QtCore.Qt.AlignmentFlag.AlignVCenter)
@@ -2583,39 +2857,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.performance_label = QtWidgets.QLabel('Performance: --')
         resource_layout.addWidget(self.performance_label, 1, 2)
 
-        # Controls row - Update interval controls (no border, like theme controls)
-        update_interval_layout = QtWidgets.QHBoxLayout()
-        update_interval_layout.setSpacing(6)
-        
-        self.update_interval_label = QtWidgets.QLabel('Update Interval:')
-        self.update_interval_combo = QtWidgets.QComboBox()
-        self.update_interval_combo.setMaximumWidth(80)
-        self.update_interval_combo.setToolTip('Set resource monitoring update interval')
-        
-        # Add interval options (in milliseconds)
-        intervals = [
-            ('0.5s', 500),
-            ('1s', 1000),
-            ('2s', 2000),
-            ('3s', 3000),
-            ('5s', 5000),
-            ('10s', 10000)
-        ]
-        
-        for text, value in intervals:
-            self.update_interval_combo.addItem(text, value)
-        
-        # Set default to 2 seconds (index 2)
-        self.update_interval_combo.setCurrentIndex(2)
-        self.update_interval_combo.currentIndexChanged.connect(self._on_update_interval_changed)
-        
-        update_interval_layout.addWidget(self.update_interval_label)
-        update_interval_layout.addWidget(self.update_interval_combo)
-        update_interval_layout.addStretch(1)
-        
-        # Add controls to layout - update interval controls span full width
-        resource_layout.addLayout(update_interval_layout, 2, 0, 1, 3)
-
         self.resource_group.setLayout(resource_layout)
 
         # Main layout
@@ -2642,12 +2883,62 @@ class MainWindow(QtWidgets.QMainWindow):
         start_state_layout.setSpacing(6)  # Fixed gap between elements
         start_state_layout.addWidget(self.btn_start_stop)
         start_state_layout.addWidget(self.state_label)
-        start_state_layout.addStretch(1)  # This pushes theme controls to the right
+        start_state_layout.addStretch(1)  # This pushes settings button to the right
         
-        # Theme controls on the right side
-        self.theme_label = QtWidgets.QLabel('Theme:')
-        start_state_layout.addWidget(self.theme_label)
-        start_state_layout.addWidget(self.theme_combo)
+        # Settings button on the right side
+        self.settings_btn = QtWidgets.QPushButton('Settings')
+        self.settings_btn.setMinimumWidth(70)
+        self.settings_btn.setMaximumWidth(90)
+        self.settings_btn.setToolTip('Open settings window to configure theme, logging, and monitoring options')
+        self.settings_btn.clicked.connect(self.show_settings_dialog)
+        start_state_layout.addWidget(self.settings_btn)
+        
+        # Initialize settings that were previously in the UI but now handled by dialog
+        self.theme_mode = 'system'  # Default theme mode
+        self.logging_level = logging.INFO  # Default logging level
+        
+        # Create theme and logging combos for settings dialog to reference
+        # These are not added to the UI layout but used by the settings dialog
+        self.theme_combo = QtWidgets.QComboBox()
+        self.theme_combo.addItem('System', 'system')
+        self.theme_combo.addItem('Light', 'light')
+        self.theme_combo.addItem('Dark', 'dark')
+        self.theme_combo.setCurrentText('System')  # Default to system
+        self.theme_combo.currentTextChanged.connect(self.on_theme_changed)
+        
+        self.logging_combo = QtWidgets.QComboBox()
+        logging_levels = [
+            ('DEBUG', logging.DEBUG),
+            ('INFO', logging.INFO),
+            ('WARNING', logging.WARNING),
+            ('ERROR', logging.ERROR),
+            ('CRITICAL', logging.CRITICAL)
+        ]
+        
+        for text, level in logging_levels:
+            self.logging_combo.addItem(text, level)
+        
+        # Set default to INFO level (index 1)
+        self.logging_combo.setCurrentIndex(1)
+        self.logging_combo.currentTextChanged.connect(self.on_logging_level_changed)
+        
+        # Create update interval combo for settings dialog to reference
+        self.update_interval_combo = QtWidgets.QComboBox()
+        intervals = [
+            ('0.5s', 500),
+            ('1s', 1000),
+            ('2s', 2000),
+            ('3s', 3000),
+            ('5s', 5000),
+            ('10s', 10000)
+        ]
+        
+        for text, value in intervals:
+            self.update_interval_combo.addItem(text, value)
+        
+        # Set default to 2 seconds (index 2)
+        self.update_interval_combo.setCurrentIndex(2)
+        self.update_interval_combo.currentIndexChanged.connect(self._on_update_interval_changed)
         
         start_state_group.setLayout(start_state_layout)
         layout.addWidget(start_state_group, 6, 0, 1, 5)
