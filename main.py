@@ -869,12 +869,24 @@ class SettingsDialog(QtWidgets.QDialog):
                 }}
                 QComboBox::down-arrow {{
                     image: none;
-                    width: 0;
-                    height: 0;
+                    width: 0px;
+                    height: 0px;
                     border-left: 5px solid transparent;
                     border-right: 5px solid transparent;
                     border-top: 6px solid {colors['foreground']};
                     margin: 0px;
+                    padding: 0px;
+                }}
+                QComboBox::down-arrow:hover {{
+                    border-top-color: {colors['accent']};
+                }}
+                QComboBox QAbstractItemView {{
+                    background-color: {colors['input_bg']};
+                    border: 1px solid {colors['border']};
+                    border-radius: 3px;
+                    color: {colors['foreground']};
+                    selection-background-color: {colors['accent']};
+                    selection-color: white;
                 }}
                 QPushButton {{
                     font-size: 9pt;
@@ -1083,12 +1095,24 @@ class SettingsDialog(QtWidgets.QDialog):
                 }}
                 QComboBox::down-arrow {{
                     image: none;
-                    width: 0;
-                    height: 0;
+                    width: 0px;
+                    height: 0px;
                     border-left: 5px solid transparent;
                     border-right: 5px solid transparent;
                     border-top: 6px solid {colors['foreground']};
                     margin: 0px;
+                    padding: 0px;
+                }}
+                QComboBox::down-arrow:hover {{
+                    border-top-color: {colors['accent']};
+                }}
+                QComboBox QAbstractItemView {{
+                    background-color: {colors['input_bg']};
+                    border: 1px solid {colors['border']};
+                    border-radius: 3px;
+                    color: {colors['foreground']};
+                    selection-background-color: {colors['accent']};
+                    selection-color: white;
                 }}
                 QPushButton {{
                     font-size: 9pt;
@@ -2073,10 +2097,10 @@ class MainWindow(QtWidgets.QMainWindow):
                 'maximized': self.isMaximized()
             }
             
-            # Validate geometry data before saving
-            if (geometry_data['width'] < 400 or geometry_data['height'] < 300 or
-                geometry_data['x'] < -100 or geometry_data['y'] < -100):
-                logger.debug(f"Invalid geometry data, skipping save: {geometry_data}")
+            # Validate geometry data before saving - only prevent extremely invalid values
+            if (geometry_data['width'] < 300 or geometry_data['height'] < 200 or
+                geometry_data['width'] > 10000 or geometry_data['height'] > 10000):
+                logger.debug(f"Invalid geometry dimensions, skipping save: {geometry_data}")
                 return
             
             # Load existing config if it exists
@@ -2140,11 +2164,18 @@ class MainWindow(QtWidgets.QMainWindow):
             screen_width = screen.width()
             screen_height = screen.height()
             
-            # Use exact saved position with minimal validation (only prevent completely offscreen)
+            # Use the exact saved position and dimensions - no adjustments
             x = geometry_data['x']
-            y = geometry_data['y']
-            width = max(640, min(geometry_data['width'], screen_width))  # Minimum 640px wide
-            height = max(720, min(geometry_data['height'], screen_height))  # Minimum 720px tall (matching initial height)
+            y = geometry_data['y'] 
+            width = geometry_data['width']
+            height = geometry_data['height']
+            
+            # Only ensure the saved dimensions meet actual minimum requirements
+            # but preserve the exact position
+            if width < 640:
+                width = 640
+            if height < 720:
+                height = 720
             
             # Only adjust position if window would be completely invisible (very permissive)
             # Allow negative positions for multi-monitor setups
@@ -2627,12 +2658,24 @@ class MainWindow(QtWidgets.QMainWindow):
             }}
             QComboBox::down-arrow {{
                 image: none;
-                width: 0;
-                height: 0;
+                width: 0px;
+                height: 0px;
                 border-left: 5px solid transparent;
                 border-right: 5px solid transparent;
                 border-top: 6px solid {colors['foreground']};
                 margin: 0px;
+                padding: 0px;
+            }}
+            QComboBox::down-arrow:hover {{
+                border-top-color: {colors['accent']};
+            }}
+            QComboBox QAbstractItemView {{
+                background-color: {colors['input_bg']};
+                border: 1px solid {colors['border']};
+                border-radius: 3px;
+                color: {colors['foreground']};
+                selection-background-color: {colors['accent']};
+                selection-color: white;
             }}
             QListWidget {{
                 font-size: 9pt;
@@ -2721,6 +2764,10 @@ class MainWindow(QtWidgets.QMainWindow):
             is_dark = self.get_effective_dark_mode()
             self.apply_dark_title_bar(is_dark)
             
+            # Force immediate update and repaint
+            self.update()
+            self.repaint()
+            
             # Also apply to any open dialogs immediately
             for dialog in QtWidgets.QApplication.allWidgets():
                 if isinstance(dialog, QtWidgets.QDialog) and dialog.isVisible():
@@ -2746,6 +2793,9 @@ class MainWindow(QtWidgets.QMainWindow):
                                         break
                                 except:
                                     continue
+                        # Force dialog to update its theme styling
+                        if hasattr(dialog, 'apply_theme_to_all_widgets'):
+                            dialog.apply_theme_to_all_widgets()
                     except:
                         pass
             
