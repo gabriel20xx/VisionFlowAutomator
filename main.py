@@ -2078,7 +2078,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def _log_btn_refresh_windows(self):
         logger.info("UI: Refresh Windows button pressed")
-        self.refresh_window_list()
+        self.refresh_window_list(keep_selection=True)
 
     def _log_combo_scenario(self, idx):
         """
