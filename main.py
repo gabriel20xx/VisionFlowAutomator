@@ -2795,8 +2795,54 @@ class MainWindow(QtWidgets.QMainWindow):
                 f"{img.get('name', 'img')} ({img.get('sensitivity', 0.9):.2f})"
                 for img in step.get('images', [])
             ])
-            acts = ','.join([a.get('type', 'action') for a in step.get('actions', [])])
+            acts = self._format_actions_summary(step.get('actions', []))
             self.steps_list.addItem(f"{name} [{cond}] imgs: {imgs} actions: {acts}")
+    
+    def _format_actions_summary(self, actions):
+        """
+        Format a list of actions into a readable summary.
+        """
+        if not actions:
+            return "none"
+        
+        summaries = []
+        for action in actions:
+            act_type = action.get('type', 'unknown')
+            params = action.get('params', {})
+            
+            if act_type == 'click':
+                button = params.get('button', 'left')
+                pos_type = params.get('pos_type', 'center')
+                if pos_type == 'center':
+                    summaries.append(f"click({button})")
+                elif pos_type == 'relative':
+                    rel_x = params.get('rel_x', 0)
+                    rel_y = params.get('rel_y', 0)
+                    summaries.append(f"click({button},rel:{rel_x},{rel_y})")
+                elif pos_type == 'absolute':
+                    abs_x = params.get('abs_x', 0)
+                    abs_y = params.get('abs_y', 0)
+                    summaries.append(f"click({button},abs:{abs_x},{abs_y})")
+                else:
+                    summaries.append(f"click({button})")
+            
+            elif act_type == 'key':
+                key = params.get('key', '?')
+                summaries.append(f"key({key})")
+            
+            elif act_type == 'scroll':
+                direction = params.get('direction', 'up')
+                amount = params.get('amount', 0)
+                summaries.append(f"scroll({direction},{amount})")
+            
+            elif act_type == 'delay':
+                duration = params.get('duration', 1.0)
+                summaries.append(f"delay({duration}s)")
+            
+            else:
+                summaries.append(act_type)
+        
+        return ', '.join(summaries)
 
     def refresh_window_list(self, keep_selection=False):
         """
@@ -2933,18 +2979,26 @@ class StepDialog(QtWidgets.QDialog):
         actions_group_layout = QtWidgets.QVBoxLayout()
         self.act_list = QtWidgets.QListWidget()
         for act in self.actions:
-            self.act_list.addItem(act.get('type', 'action'))
+            self.act_list.addItem(self._format_action_description(act))
         actions_group_layout.addWidget(self.act_list)
         act_btns_layout = QtWidgets.QHBoxLayout()
         self.btn_add_act = QtWidgets.QPushButton('Add Action')
+        self.btn_add_act.setToolTip('Add a new action to this step')
         self.btn_add_act.clicked.connect(self.add_action)
+        self.btn_edit_act = QtWidgets.QPushButton('Edit Action')
+        self.btn_edit_act.setToolTip('Edit the selected action')
+        self.btn_edit_act.clicked.connect(self.edit_action)
         self.btn_del_act = QtWidgets.QPushButton('Delete Action')
+        self.btn_del_act.setToolTip('Delete the selected action')
         self.btn_del_act.clicked.connect(self.delete_action)
         self.btn_move_up_act = QtWidgets.QPushButton('Move Up')
+        self.btn_move_up_act.setToolTip('Move action up (higher priority)')
         self.btn_move_up_act.clicked.connect(self.move_action_up)
         self.btn_move_down_act = QtWidgets.QPushButton('Move Down')
+        self.btn_move_down_act.setToolTip('Move action down (lower priority)')
         self.btn_move_down_act.clicked.connect(self.move_action_down)
         act_btns_layout.addWidget(self.btn_add_act)
+        act_btns_layout.addWidget(self.btn_edit_act)
         act_btns_layout.addWidget(self.btn_del_act)
         act_btns_layout.addWidget(self.btn_move_up_act)
         act_btns_layout.addWidget(self.btn_move_down_act)
@@ -2972,8 +3026,10 @@ class StepDialog(QtWidgets.QDialog):
         idx = self.act_list.currentRow()
         if idx > 0:
             self.actions[idx-1], self.actions[idx] = self.actions[idx], self.actions[idx-1]
-            item = self.act_list.takeItem(idx)
-            self.act_list.insertItem(idx-1, item)
+            # Update the display
+            self.act_list.clear()
+            for act in self.actions:
+                self.act_list.addItem(self._format_action_description(act))
             self.act_list.setCurrentRow(idx-1)
 
     def move_action_down(self):
@@ -2983,8 +3039,10 @@ class StepDialog(QtWidgets.QDialog):
         idx = self.act_list.currentRow()
         if idx < len(self.actions) - 1 and idx >= 0:
             self.actions[idx+1], self.actions[idx] = self.actions[idx], self.actions[idx+1]
-            item = self.act_list.takeItem(idx)
-            self.act_list.insertItem(idx+1, item)
+            # Update the display
+            self.act_list.clear()
+            for act in self.actions:
+                self.act_list.addItem(self._format_action_description(act))
             self.act_list.setCurrentRow(idx+1)
 
     class NameImageDialog(QtWidgets.QDialog):
@@ -3247,12 +3305,71 @@ class StepDialog(QtWidgets.QDialog):
                 logger.error(f"Failed to save retaken screenshot to {path}")
                 QtWidgets.QMessageBox.critical(self, 'Error', 'Failed to save the retaken screenshot file.')
 
+    def _format_action_description(self, action):
+        """
+        Format an action dictionary into a readable description.
+        """
+        act_type = action.get('type', 'unknown')
+        params = action.get('params', {})
+        
+        if act_type == 'click':
+            button = params.get('button', 'left')
+            pos_type = params.get('pos_type', 'center')
+            
+            desc = f"Click ({button} button)"
+            if pos_type == 'center':
+                desc += " at center"
+            elif pos_type == 'relative':
+                rel_x = params.get('rel_x', 0)
+                rel_y = params.get('rel_y', 0)
+                desc += f" at relative ({rel_x}, {rel_y})"
+            elif pos_type == 'absolute':
+                abs_x = params.get('abs_x', 0)
+                abs_y = params.get('abs_y', 0)
+                desc += f" at absolute ({abs_x}, {abs_y})"
+            
+            return desc
+        
+        elif act_type == 'key':
+            key = params.get('key', 'unknown')
+            return f"Press key: {key}"
+        
+        elif act_type == 'scroll':
+            direction = params.get('direction', 'up')
+            amount = params.get('amount', 0)
+            return f"Scroll {direction} by {amount}"
+        
+        elif act_type == 'delay':
+            duration = params.get('duration', 1.0)
+            return f"Delay {duration}s"
+        
+        else:
+            return f"{act_type} action"
+
     def add_action(self):
         dlg = StepActionDialog(self)
         if dlg.exec():
             act = dlg.get_action()
             self.actions.append(act)
-            self.act_list.addItem(act.get('type', 'action'))
+            self.act_list.addItem(self._format_action_description(act))
+
+    def edit_action(self):
+        """
+        Edit the currently selected action in the step.
+        """
+        idx = self.act_list.currentRow()
+        if idx < 0 or idx >= len(self.actions):
+            QtWidgets.QMessageBox.warning(self, "No Action Selected", "Please select an action to edit.")
+            return
+            
+        current_action = self.actions[idx]
+        dlg = StepActionDialog(self, action=current_action)
+        if dlg.exec():
+            edited_action = dlg.get_action()
+            self.actions[idx] = edited_action
+            # Update the display
+            item = self.act_list.item(idx)
+            item.setText(self._format_action_description(edited_action))
 
     def delete_action(self):
         """
@@ -3280,12 +3397,12 @@ class StepActionDialog(QtWidgets.QDialog):
     Dialog for adding or editing an action for a step.
     Supports click, key, scroll, and delay actions.
     """
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, action=None):
         """
         Initialize the StepActionDialog for adding or editing a step action.
         """
         super().__init__(parent)
-        self.setWindowTitle('Add Action')
+        self.setWindowTitle('Edit Action' if action else 'Add Action')
         self.type_combo = QtWidgets.QComboBox()
         self.type_combo.addItems(['click', 'key', 'scroll', 'delay'])
         # Click options
@@ -3362,7 +3479,46 @@ class StepActionDialog(QtWidgets.QDialog):
         self.setLayout(self.form)
         self.type_combo.currentTextChanged.connect(lambda: self.update_fields())
         self.click_pos_combo.currentTextChanged.connect(lambda: self.update_fields())
+        
+        # If editing an existing action, populate the fields
+        if action:
+            self._populate_from_action(action)
+        
         self.update_fields()
+        
+    def _populate_from_action(self, action):
+        """
+        Populate the dialog fields from an existing action dictionary.
+        """
+        act_type = action.get('type', 'click')
+        params = action.get('params', {})
+        
+        # Set action type
+        self.type_combo.setCurrentText(act_type)
+        
+        if act_type == 'click':
+            self.click_btn_combo.setCurrentText(params.get('button', 'left'))
+            pos_type = params.get('pos_type', 'center')
+            self.click_pos_combo.setCurrentText(pos_type)
+            
+            if pos_type == 'relative':
+                self.rel_x_spin.setValue(params.get('rel_x', 0))
+                self.rel_y_spin.setValue(params.get('rel_y', 0))
+            elif pos_type == 'absolute':
+                self.abs_x_spin.setValue(params.get('abs_x', 0))
+                self.abs_y_spin.setValue(params.get('abs_y', 0))
+                
+        elif act_type == 'scroll':
+            self.scroll_dir_combo.setCurrentText(params.get('direction', 'up'))
+            self.scroll_amt_spin.setValue(params.get('amount', 100))
+            
+        elif act_type == 'key':
+            key = params.get('key', '')
+            self.key_value = key
+            self.key_label.setText(f'Key: {key}' if key else '(press a key)')
+            
+        elif act_type == 'delay':
+            self.delay_spin.setValue(params.get('duration', 1.0))
 
     def update_fields(self):
         """
