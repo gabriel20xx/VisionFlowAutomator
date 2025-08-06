@@ -678,29 +678,46 @@ class Scenario:
 
     def save(self):
         """
-        Save the scenario to disk as a JSON file.
+        Save the scenario to disk as a JSON file in the user's scenarios directory.
+        Always saves to the user directory, never to pre-made scenarios.
         """
         try:
-            scenario_dir = self.get_scenario_dir()
+            # Always save to user directory, even if originally loaded from pre-made
+            scenario_dir = os.path.join(CONFIG_DIR, self.name)
             if not os.path.exists(scenario_dir):
-                os.makedirs(scenario_dir)
+                os.makedirs(scenario_dir, exist_ok=True)
+            
+            # If this scenario was originally from pre-made folder and doesn't exist in user folder,
+            # copy all assets first
+            if not os.path.exists(os.path.join(scenario_dir, 'scenario.json')):
+                self.copy_to_user_scenarios()
             
             with open(os.path.join(scenario_dir, 'scenario.json'), 'w') as f:
                 json.dump(self.to_dict(), f, indent=2)
-            logger.info(f"Scenario '{self.name}' saved.")
+            logger.info(f"Scenario '{self.name}' saved to user directory.")
         except Exception as e:
             logger.error(f"Failed to save scenario '{self.name}': {e}")
 
     @staticmethod
-    def load(name):
+    def load(name, from_premade=False):
         """
         Load a scenario from disk by name.
+        If from_premade is True, loads from the pre-made scenarios folder.
         """
         try:
-            scenario_dir = os.path.join(CONFIG_DIR, name)
-            with open(os.path.join(scenario_dir, 'scenario.json'), 'r') as f:
+            if from_premade:
+                scenario_dir = os.path.join(os.path.dirname(__file__), 'templates', name)
+            else:
+                scenario_dir = os.path.join(CONFIG_DIR, name)
+                
+            scenario_file = os.path.join(scenario_dir, 'scenario.json')
+            if not os.path.exists(scenario_file):
+                logger.error(f"Scenario file not found: {scenario_file}")
+                return None
+                
+            with open(scenario_file, 'r') as f:
                 scenario = Scenario.from_dict(json.load(f))
-            logger.info(f"Scenario '{name}' loaded.")
+            logger.info(f"Scenario '{name}' loaded from {'pre-made' if from_premade else 'user'} directory.")
             return scenario
         except Exception as e:
             logger.error(f"Failed to load scenario '{name}': {e}")
@@ -709,9 +726,57 @@ class Scenario:
     @staticmethod
     def list_all():
         """
-        List all scenario directories.
+        List all scenario directories from the user's config directory.
         """
+        if not os.path.exists(CONFIG_DIR):
+            os.makedirs(CONFIG_DIR, exist_ok=True)
         return [d for d in os.listdir(CONFIG_DIR) if os.path.isdir(os.path.join(CONFIG_DIR, d))]
+    
+    @staticmethod
+    def list_premade():
+        """
+        List all pre-made scenario directories.
+        """
+        premade_dir = os.path.join(os.path.dirname(__file__), 'templates')
+        if not os.path.exists(premade_dir):
+            return []
+        return [d for d in os.listdir(premade_dir) if os.path.isdir(os.path.join(premade_dir, d))]
+    
+    def copy_to_user_scenarios(self):
+        """
+        Copy this scenario (and its assets) to the user's scenarios directory.
+        This is used when a pre-made scenario is selected and needs to be editable.
+        """
+        try:
+            import shutil
+            
+            # Source directory (could be pre-made or user directory)
+            source_dir = self.get_scenario_dir()
+            
+            # Destination directory (always user directory)
+            dest_dir = os.path.join(CONFIG_DIR, self.name)
+            
+            # If the destination already exists, we don't need to copy
+            if os.path.exists(dest_dir):
+                logger.debug(f"User scenario '{self.name}' already exists, skipping copy.")
+                return True
+            
+            # Check if source is a pre-made scenario
+            premade_dir = os.path.join(os.path.dirname(__file__), 'templates', self.name)
+            if os.path.exists(premade_dir):
+                source_dir = premade_dir
+            
+            if os.path.exists(source_dir):
+                shutil.copytree(source_dir, dest_dir)
+                logger.info(f"Copied scenario '{self.name}' to user scenarios directory.")
+                return True
+            else:
+                logger.error(f"Source scenario directory not found: {source_dir}")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Failed to copy scenario '{self.name}' to user directory: {e}")
+            return False
 
 def take_screenshot_with_tkinter():
     """
@@ -2067,27 +2132,41 @@ class MainWindow(QtWidgets.QMainWindow):
     def delete_scenario(self):
         """
         Delete the current scenario after confirmation.
+        Only deletes user scenarios - templates are protected.
         """
         if not self.current_scenario:
             return
+            
         name = self.current_scenario.name
+        scenario_dir = self.current_scenario.get_scenario_dir()
+        
+        # Check if this is trying to delete a template (should never happen but extra protection)
+        templates_dir = os.path.join(os.path.dirname(__file__), 'templates', name)
+        if os.path.samefile(scenario_dir, templates_dir) if os.path.exists(templates_dir) else False:
+            QtWidgets.QMessageBox.warning(
+                self,
+                "Cannot Delete Template",
+                f"Cannot delete template scenario '{name}'. Templates are protected from deletion."
+            )
+            return
+        
         reply = QtWidgets.QMessageBox.question(
             self,
             "Delete Scenario",
-            f"Are you sure you want to delete the scenario '{name}'? This cannot be undone.",
+            f"Are you sure you want to delete the scenario '{name}'? This will delete the entire scenario folder and cannot be undone.",
             QtWidgets.QMessageBox.StandardButton.Yes | QtWidgets.QMessageBox.StandardButton.No
         )
         if reply == QtWidgets.QMessageBox.StandardButton.Yes:
             try:
-                scenario_dir = self.current_scenario.get_scenario_dir()
                 if os.path.exists(scenario_dir):
+                    import shutil
                     shutil.rmtree(scenario_dir)
-                logger.info(f"Deleted scenario: {name}")
+                logger.info(f"Deleted scenario folder: {scenario_dir}")
                 self.current_scenario = None
                 self.load_scenarios()
             except Exception as e:
                 logger.error(f"Failed to delete scenario '{name}': {e}")
-                QtWidgets.QMessageBox.critical(self, "Delete Error", f"Failed to delete scenario.\n{e}")
+                QtWidgets.QMessageBox.critical(self, "Delete Error", f"Failed to delete scenario folder.\n{e}")
 
     def _log_steps_list(self, idx):
         """
@@ -2267,16 +2346,32 @@ class MainWindow(QtWidgets.QMainWindow):
     def load_scenarios(self):
         """
         Load all scenarios and populate the scenario combo box.
+        Includes both user scenarios and pre-made scenarios.
         """
         logger.debug('Loading scenarios...')
         self.combo.clear()
-        scenarios = Scenario.list_all()
-        for name in scenarios:
-            self.combo.addItem(name)
+        
+        # Load user scenarios
+        user_scenarios = Scenario.list_all()
+        premade_scenarios = Scenario.list_premade()
+        
+        # Add user scenarios first
+        for name in user_scenarios:
+            self.combo.addItem(f"📁 {name}", {'name': name, 'is_premade': False})
+        
+        # Add separator if both types exist
+        if user_scenarios and premade_scenarios:
+            self.combo.insertSeparator(self.combo.count())
+        
+        # Add pre-made scenarios with a different icon/prefix
+        for name in premade_scenarios:
+            # Only add if not already in user scenarios
+            if name not in user_scenarios:
+                self.combo.addItem(f"⭐ {name} (Template)", {'name': name, 'is_premade': True})
 
         self.refresh_window_list()
 
-        if not scenarios:
+        if not user_scenarios and not premade_scenarios:
             choice_dialog = QtWidgets.QMessageBox(self)
             choice_dialog.setWindowTitle('No Scenarios Found')
             choice_dialog.setText('No scenarios found. Would you like to create a new scenario or import one?')
@@ -2291,8 +2386,8 @@ class MainWindow(QtWidgets.QMainWindow):
                     logger.info(f'Creating new scenario: {name}')
                     s = Scenario(name)
                     s.save()
-                    self.combo.addItem(name)
-                    self.combo.setCurrentText(name)
+                    self.combo.addItem(f"📁 {name}", {'name': name, 'is_premade': False})
+                    self.combo.setCurrentIndex(0)
                 else:
                     self.refresh_lists()
             elif clicked == import_btn:
@@ -2300,23 +2395,79 @@ class MainWindow(QtWidgets.QMainWindow):
             else:
                 self.refresh_lists()
         else:
+            # Try to restore last scenario
             last_scenario_name = self.read_last_scenario()
-            if last_scenario_name and last_scenario_name in scenarios:
-                self.combo.setCurrentText(last_scenario_name)
+            if last_scenario_name:
+                # Look for the scenario in the combo box
+                for i in range(self.combo.count()):
+                    item_data = self.combo.itemData(i)
+                    if item_data and item_data.get('name') == last_scenario_name:
+                        self.combo.setCurrentIndex(i)
+                        break
+                else:
+                    # If last scenario not found, select first available
+                    if self.combo.count() > 0:
+                        self.combo.setCurrentIndex(0)
             else:
-                self.combo.setCurrentIndex(0)
+                # Select first scenario if available
+                if self.combo.count() > 0:
+                    self.combo.setCurrentIndex(0)
 
     def select_scenario(self):
         """
         Load the selected scenario and update the UI.
+        Handles both user scenarios and pre-made scenario templates.
         """
-        name = self.combo.currentText()
-        logger.info(f'Scenario selected: {name}')
-        if name:
-            self.current_scenario = Scenario.load(name)
-            self.save_last_scenario(name)
-            self.refresh_lists()
-            self.load_selected_window_from_config()
+        current_index = self.combo.currentIndex()
+        item_data = self.combo.itemData(current_index)
+        
+        if not item_data:
+            # Might be a separator or invalid selection
+            logger.warning("No valid scenario data found for selection")
+            return
+            
+        scenario_name = item_data.get('name')
+        is_premade = item_data.get('is_premade', False)
+        
+        logger.info(f'Scenario selected: {scenario_name} ({"pre-made" if is_premade else "user"})')
+        
+        if scenario_name:
+            # Load the scenario from appropriate location
+            self.current_scenario = Scenario.load(scenario_name, from_premade=is_premade)
+            
+            if self.current_scenario:
+                # If it's a pre-made scenario, immediately copy it to user folder to protect the template
+                if is_premade:
+                    logger.info(f"Loaded template scenario '{scenario_name}'. Copying to user scenarios folder for editing.")
+                    success = self.current_scenario.copy_to_user_scenarios()
+                    if success:
+                        # Reload the scenario from the user directory to ensure we're working with the copy
+                        self.current_scenario = Scenario.load(scenario_name, from_premade=False)
+                        # Show a brief tooltip or status message
+                        QtWidgets.QToolTip.showText(
+                            self.combo.mapToGlobal(self.combo.rect().bottomLeft()),
+                            "Template copied to your scenarios folder for editing!",
+                            self.combo,
+                            QtCore.QRect(),
+                            3000  # Show for 3 seconds
+                        )
+                    else:
+                        QtWidgets.QMessageBox.warning(
+                            self,
+                            "Copy Error",
+                            f"Failed to copy template '{scenario_name}' to user scenarios folder. You may not be able to save changes."
+                        )
+                
+                self.save_last_scenario(scenario_name)
+                self.refresh_lists()
+                self.load_selected_window_from_config()
+            else:
+                logger.error(f"Failed to load scenario: {scenario_name}")
+                QtWidgets.QMessageBox.warning(
+                    self, 
+                    "Load Error", 
+                    f"Failed to load scenario '{scenario_name}'. The scenario file may be corrupted."
+                )
 
     def create_scenario(self):
         """
@@ -2328,7 +2479,13 @@ class MainWindow(QtWidgets.QMainWindow):
             s = Scenario(name)
             s.save()
             self.load_scenarios()
-            self.combo.setCurrentText(name)
+            
+            # Find and select the newly created scenario
+            for i in range(self.combo.count()):
+                item_data = self.combo.itemData(i)
+                if item_data and item_data.get('name') == name and not item_data.get('is_premade', False):
+                    self.combo.setCurrentIndex(i)
+                    break
 
     def rename_scenario(self):
         """

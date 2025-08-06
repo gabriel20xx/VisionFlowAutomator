@@ -1,0 +1,63 @@
+{
+  "name": "Web Browser Example",
+  "steps": [
+    {
+      "name": "Refresh Page",
+      "condition": "OR",
+      "images": [],
+      "actions": [
+        {
+          "type": "key",
+          "params": {
+            "key": "F5"
+          }
+        },
+        {
+          "type": "delay",
+          "params": {
+            "duration": 2.0
+          }
+        }
+      ]
+    },
+    {
+      "name": "Scroll Down",
+      "condition": "OR",
+      "images": [],
+      "actions": [
+        {
+          "type": "scroll",
+          "params": {
+            "direction": "down",
+            "amount": 300
+          }
+        },
+        {
+          "type": "delay",
+          "params": {
+            "duration": 0.5
+          }
+        }
+      ]
+    },
+    {
+      "name": "Go Back",
+      "condition": "OR",
+      "images": [],
+      "actions": [
+        {
+          "type": "key",
+          "params": {
+            "key": "Alt+Left"
+          }
+        },
+        {
+          "type": "delay",
+          "params": {
+            "duration": 1.0
+          }
+        }
+      ]
+    }
+  ]
+}

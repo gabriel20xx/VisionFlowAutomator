@@ -1,0 +1,25 @@
+{
+  "name": "Simple Click Example",
+  "steps": [
+    {
+      "name": "Click on Button",
+      "condition": "OR",
+      "images": [],
+      "actions": [
+        {
+          "type": "click",
+          "params": {
+            "button": "left",
+            "pos_type": "center"
+          }
+        },
+        {
+          "type": "delay",
+          "params": {
+            "duration": 1.0
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,74 @@
+{
+  "name": "Gaming Example", 
+  "steps": [
+    {
+      "name": "Attack",
+      "condition": "OR",
+      "images": [],
+      "actions": [
+        {
+          "type": "key",
+          "params": {
+            "key": "Space"
+          }
+        },
+        {
+          "type": "delay",
+          "params": {
+            "duration": 0.1
+          }
+        }
+      ]
+    },
+    {
+      "name": "Use Ability",
+      "condition": "OR", 
+      "images": [],
+      "actions": [
+        {
+          "type": "key",
+          "params": {
+            "key": "1"
+          }
+        },
+        {
+          "type": "delay",
+          "params": {
+            "duration": 2.0
+          }
+        }
+      ]
+    },
+    {
+      "name": "Move Character",
+      "condition": "OR",
+      "images": [],
+      "actions": [
+        {
+          "type": "key",
+          "params": {
+            "key": "W"
+          }
+        },
+        {
+          "type": "delay",
+          "params": {
+            "duration": 0.5
+          }
+        },
+        {
+          "type": "key",
+          "params": {
+            "key": "A"
+          }
+        },
+        {
+          "type": "delay",
+          "params": {
+            "duration": 0.2
+          }
+        }
+      ]
+    }
+  ]
+}
