@@ -2371,15 +2371,33 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.refresh_window_list()
 
-        if not user_scenarios and not premade_scenarios:
+        if not user_scenarios:
+            # Show welcome dialog with all available options
             choice_dialog = QtWidgets.QMessageBox(self)
-            choice_dialog.setWindowTitle('No Scenarios Found')
-            choice_dialog.setText('No scenarios found. Would you like to create a new scenario or import one?')
-            create_btn = choice_dialog.addButton('Create New', QtWidgets.QMessageBox.ButtonRole.AcceptRole)
-            import_btn = choice_dialog.addButton('Import', QtWidgets.QMessageBox.ButtonRole.ActionRole)
-            choice_dialog.setDefaultButton(create_btn)
+            choice_dialog.setWindowTitle('Welcome to VisionFlow Automator')
+            
+            if premade_scenarios:
+                choice_dialog.setText('Welcome! Choose how you\'d like to get started:')
+                choice_dialog.setInformativeText(
+                    'You can:\n'
+                    '• Create a new scenario from scratch\n'
+                    '• Import an existing scenario from a ZIP file\n'
+                    f'• Start with one of {len(premade_scenarios)} available templates'
+                )
+                create_btn = choice_dialog.addButton('Create New', QtWidgets.QMessageBox.ButtonRole.AcceptRole)
+                import_btn = choice_dialog.addButton('Import', QtWidgets.QMessageBox.ButtonRole.ActionRole)
+                template_btn = choice_dialog.addButton('Use Template', QtWidgets.QMessageBox.ButtonRole.ActionRole)
+                choice_dialog.setDefaultButton(template_btn)
+            else:
+                choice_dialog.setText('Welcome! No scenarios found. Would you like to create a new scenario or import one?')
+                create_btn = choice_dialog.addButton('Create New', QtWidgets.QMessageBox.ButtonRole.AcceptRole)
+                import_btn = choice_dialog.addButton('Import', QtWidgets.QMessageBox.ButtonRole.ActionRole)
+                choice_dialog.setDefaultButton(create_btn)
+                template_btn = None
+            
             choice_dialog.exec()
             clicked = choice_dialog.clickedButton()
+            
             if clicked == create_btn:
                 name, ok = QtWidgets.QInputDialog.getText(self, 'New Scenario', 'Enter a name for your first scenario:')
                 if ok and name:
@@ -2392,6 +2410,8 @@ class MainWindow(QtWidgets.QMainWindow):
                     self.refresh_lists()
             elif clicked == import_btn:
                 self.import_scenario()
+            elif clicked == template_btn and premade_scenarios:
+                self._show_template_selection_dialog(premade_scenarios)
             else:
                 self.refresh_lists()
         else:
@@ -2412,6 +2432,153 @@ class MainWindow(QtWidgets.QMainWindow):
                 # Select first scenario if available
                 if self.combo.count() > 0:
                     self.combo.setCurrentIndex(0)
+
+    def _show_template_selection_dialog(self, premade_scenarios):
+        """
+        Show a dialog to select from available templates.
+        """
+        dialog = QtWidgets.QDialog(self)
+        dialog.setWindowTitle('Select Template')
+        dialog.setModal(True)
+        dialog.resize(500, 400)
+        
+        layout = QtWidgets.QVBoxLayout()
+        
+        # Instructions
+        instruction_label = QtWidgets.QLabel(
+            'Choose a template to get started quickly. Templates will be copied to your scenarios folder for editing:'
+        )
+        instruction_label.setWordWrap(True)
+        instruction_label.setStyleSheet('font-weight: bold; margin-bottom: 10px;')
+        layout.addWidget(instruction_label)
+        
+        # Template list
+        template_list = QtWidgets.QListWidget()
+        template_list.setStyleSheet('QListWidget { font-size: 10pt; }')
+        
+        for template_name in premade_scenarios:
+            item = QtWidgets.QListWidgetItem(f"⭐ {template_name}")
+            item.setData(QtCore.Qt.ItemDataRole.UserRole, template_name)
+            
+            # Try to read template description if available
+            try:
+                template_path = os.path.join(os.path.dirname(__file__), 'templates', template_name, 'scenario.json')
+                if os.path.exists(template_path):
+                    with open(template_path, 'r') as f:
+                        template_data = json.load(f)
+                        steps_count = len(template_data.get('steps', []))
+                        
+                        # Create a more detailed description
+                        description_parts = []
+                        if steps_count > 0:
+                            description_parts.append(f"{steps_count} step{'s' if steps_count != 1 else ''}")
+                            
+                            # Get action types from steps
+                            action_types = set()
+                            for step in template_data.get('steps', []):
+                                for action in step.get('actions', []):
+                                    action_types.add(action.get('type', 'unknown'))
+                            
+                            if action_types:
+                                actions_str = ', '.join(sorted(action_types))
+                                description_parts.append(f"Actions: {actions_str}")
+                        
+                        if description_parts:
+                            item.setToolTip(f"Template: {template_name}\n" + '\n'.join(description_parts))
+                        else:
+                            item.setToolTip(f"Template: {template_name}")
+            except Exception as e:
+                logger.debug(f"Could not read template details for {template_name}: {e}")
+                item.setToolTip(f"Template: {template_name}")
+            
+            template_list.addItem(item)
+        
+        # Select first item by default
+        if template_list.count() > 0:
+            template_list.setCurrentRow(0)
+        
+        layout.addWidget(template_list)
+        
+        # Buttons
+        button_layout = QtWidgets.QHBoxLayout()
+        
+        select_btn = QtWidgets.QPushButton('Select Template')
+        select_btn.setDefault(True)
+        cancel_btn = QtWidgets.QPushButton('Cancel')
+        create_new_btn = QtWidgets.QPushButton('Create New Instead')
+        import_btn = QtWidgets.QPushButton('Import Instead')
+        
+        button_layout.addWidget(create_new_btn)
+        button_layout.addWidget(import_btn)
+        button_layout.addStretch()
+        button_layout.addWidget(cancel_btn)
+        button_layout.addWidget(select_btn)
+        
+        layout.addLayout(button_layout)
+        dialog.setLayout(layout)
+        
+        # Connect buttons
+        def on_select():
+            current_item = template_list.currentItem()
+            if current_item:
+                template_name = current_item.data(QtCore.Qt.ItemDataRole.UserRole)
+                # Load the template scenario
+                template_scenario = Scenario.load(template_name, from_premade=True)
+                if template_scenario:
+                    # Copy to user scenarios
+                    success = template_scenario.copy_to_user_scenarios()
+                    if success:
+                        logger.info(f'Selected template: {template_name}')
+                        # Reload scenarios and select the copied template
+                        self.load_scenarios()
+                        # Find and select the copied scenario
+                        for i in range(self.combo.count()):
+                            item_data = self.combo.itemData(i)
+                            if item_data and item_data.get('name') == template_name and not item_data.get('is_premade', False):
+                                self.combo.setCurrentIndex(i)
+                                break
+                        dialog.accept()
+                    else:
+                        QtWidgets.QMessageBox.warning(
+                            dialog, 
+                            "Copy Error", 
+                            f"Failed to copy template '{template_name}' to your scenarios folder."
+                        )
+                else:
+                    QtWidgets.QMessageBox.warning(
+                        dialog, 
+                        "Load Error", 
+                        f"Failed to load template '{template_name}'."
+                    )
+        
+        def on_create_new():
+            dialog.accept()
+            name, ok = QtWidgets.QInputDialog.getText(self, 'New Scenario', 'Enter scenario name:')
+            if ok and name:
+                logger.info(f'Creating new scenario: {name}')
+                s = Scenario(name)
+                s.save()
+                self.load_scenarios()
+                # Find and select the newly created scenario
+                for i in range(self.combo.count()):
+                    item_data = self.combo.itemData(i)
+                    if item_data and item_data.get('name') == name and not item_data.get('is_premade', False):
+                        self.combo.setCurrentIndex(i)
+                        break
+        
+        def on_import():
+            dialog.accept()
+            self.import_scenario()
+        
+        select_btn.clicked.connect(on_select)
+        cancel_btn.clicked.connect(dialog.reject)
+        create_new_btn.clicked.connect(on_create_new)
+        import_btn.clicked.connect(on_import)
+        
+        # Handle double-click on list
+        template_list.itemDoubleClicked.connect(lambda: on_select())
+        
+        dialog.exec()
 
     def select_scenario(self):
         """
