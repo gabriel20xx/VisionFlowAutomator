@@ -1990,7 +1990,12 @@ class MainWindow(QtWidgets.QMainWindow):
         """
         Update the resource usage display in the UI with theme-aware colors and max/average statistics.
         Now populates both system resources and program usage sections.
+        Skips update if window is minimized to prevent painting errors.
         """
+        # Skip updates if window is minimized or not visible to prevent QPainter errors
+        if self.isMinimized() or not self.isVisible():
+            return
+        
         try:
             colors = self.get_theme_styles()
             
@@ -2422,6 +2427,18 @@ class MainWindow(QtWidgets.QMainWindow):
             # Save geometry when window state changes
             QtCore.QTimer.singleShot(100, self._save_window_geometry)
     
+    def paintEvent(self, event):
+        """Custom paint event to prevent QPainter errors when minimized."""
+        # Skip painting if window is minimized or not visible
+        if self.isMinimized() or not self.isVisible():
+            return
+        
+        # Only paint if the window is actually visible and active
+        try:
+            super().paintEvent(event)
+        except Exception as e:
+            logger.debug(f"Paint event error (ignored): {e}")
+    
     def closeEvent(self, event):
         """Handle application close event with proper cleanup."""
         # Save window geometry before closing
@@ -2721,6 +2738,7 @@ class MainWindow(QtWidgets.QMainWindow):
     def apply_theme(self):
         """
         Apply the current theme to all UI elements including title bar.
+        Skips updates for minimized windows to prevent painting errors.
         """
         colors = self.get_theme_styles()
         is_dark = self.get_effective_dark_mode()
@@ -2732,6 +2750,12 @@ class MainWindow(QtWidgets.QMainWindow):
         for widget in QtWidgets.QApplication.allWidgets():
             if isinstance(widget, (QtWidgets.QDialog, QtWidgets.QMainWindow)):
                 try:
+                    # Skip minimized or invisible widgets to prevent painting errors
+                    if hasattr(widget, 'isMinimized') and widget.isMinimized():
+                        continue
+                    if hasattr(widget, 'isVisible') and not widget.isVisible():
+                        continue
+                    
                     # Apply title bar theme to each window/dialog
                     self._apply_title_bar_theme_to_window(widget, is_dark)
                     
