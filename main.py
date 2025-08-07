@@ -1628,6 +1628,8 @@ class MainWindow(QtWidgets.QMainWindow):
                 'system_cpu_percent': system_cpu,  # System-wide CPU
                 'system_memory_percent': system_memory.percent,
                 'system_memory_available_gb': system_memory.available / 1024 / 1024 / 1024,  # GB
+                'system_memory_total_gb': system_memory.total / 1024 / 1024 / 1024,  # GB
+                'system_memory_used_gb': system_memory.used / 1024 / 1024 / 1024,  # GB
                 'template_cache_size': len(template_cache._cache) if hasattr(template_cache, '_cache') else 0,
                 'cooldown_entries': len(self._step_cooldown) if hasattr(self, '_step_cooldown') else 0,
                 'has_psutil': True,
@@ -1649,6 +1651,8 @@ class MainWindow(QtWidgets.QMainWindow):
                 'system_cpu_percent': 0,
                 'system_memory_percent': 0,
                 'system_memory_available_gb': 0,
+                'system_memory_total_gb': 0,
+                'system_memory_used_gb': 0,
                 'template_cache_size': len(template_cache._cache) if hasattr(template_cache, '_cache') else 0,
                 'cooldown_entries': len(self._step_cooldown) if hasattr(self, '_step_cooldown') else 0,
                 'has_psutil': False,
@@ -2010,7 +2014,9 @@ class MainWindow(QtWidgets.QMainWindow):
             # System RAM usage
             if memory_info.get('has_psutil', False):
                 current_sys, max_sys, avg_sys = self._get_resource_stats(self._resource_history['system_memory_percent'])
-                system_ram_text = f"RAM: {current_sys:.1f}% ({memory_info['system_memory_available_gb']:.1f}GB free)\nAvg: {avg_sys:.1f}% | Max: {max_sys:.1f}%"
+                used_gb = memory_info['system_memory_used_gb']
+                total_gb = memory_info['system_memory_total_gb']
+                system_ram_text = f"RAM: {used_gb:.1f}/{total_gb:.1f}GB ({current_sys:.1f}%)\nAvg: {avg_sys:.1f}% | Max: {max_sys:.1f}%"
                 system_ram_color = colors['error'] if current_sys > 85 else colors['warning'] if current_sys > 70 else colors['success']
             else:
                 system_ram_text = "RAM: N/A\npsutil needed"
@@ -2067,8 +2073,10 @@ class MainWindow(QtWidgets.QMainWindow):
             if memory_info.get('has_psutil', False):
                 current_mb, max_mb, avg_mb = self._get_resource_stats(self._resource_history['memory_mb'])
                 current_pct, max_pct, avg_pct = self._get_resource_stats(self._resource_history['memory_percent'])
+                total_gb = memory_info['system_memory_total_gb']
+                current_gb = current_mb / 1024
                 
-                program_ram_text = f"RAM: {current_mb:.1f}MB ({current_pct:.1f}%)\nAvg: {avg_mb:.1f}MB | Max: {max_mb:.1f}MB"
+                program_ram_text = f"RAM: {current_gb:.2f}/{total_gb:.1f}GB ({current_pct:.1f}%)\nAvg: {avg_mb:.1f}MB | Max: {max_mb:.1f}MB"
                 program_ram_color = colors['error'] if current_mb > 500 else colors['warning'] if current_mb > 200 else colors['success']
             else:
                 program_ram_text = "RAM: N/A\npsutil needed"
