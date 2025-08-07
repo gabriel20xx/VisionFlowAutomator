@@ -656,12 +656,12 @@ class Scenario:
         """
         self.name = name
         self.steps = steps or []  # List of Step dicts
-        # Global delay settings - delays in milliseconds
+        # Global delay settings - delays in seconds
         self.global_delay = global_delay or {
-            'before_action': 0,  # Delay before each action in ms
-            'after_action': 0,   # Delay after each action in ms
-            'before_step': 0,    # Delay before each step in ms
-            'after_step': 0      # Delay after each step in ms
+            'before_action': 0.0,  # Delay before each action in seconds
+            'after_action': 0.0,   # Delay after each action in seconds
+            'before_step': 0.0,    # Delay before each step in seconds
+            'after_step': 0.0      # Delay after each step in seconds
         }
 
     def to_dict(self):
@@ -681,10 +681,10 @@ class Scenario:
         """
         # Handle backward compatibility for scenarios without global_delay
         global_delay = data.get('global_delay', {
-            'before_action': 0,
-            'after_action': 0,
-            'before_step': 0,
-            'after_step': 0
+            'before_action': 0.0,
+            'after_action': 0.0,
+            'before_step': 0.0,
+            'after_step': 0.0
         })
         return Scenario(data['name'], data.get('steps', []), global_delay)
 
@@ -1290,20 +1290,20 @@ class MainWindow(QtWidgets.QMainWindow):
                         
                         # Apply global before-step delay
                         if self.current_scenario and self.current_scenario.global_delay:
-                            before_step_delay = self.current_scenario.global_delay.get('before_step', 0)
+                            before_step_delay = self.current_scenario.global_delay.get('before_step', 0.0)
                             if before_step_delay > 0:
-                                logger.debug(f'Applying global before-step delay: {before_step_delay}ms')
-                                time.sleep(before_step_delay / 1000.0)
+                                logger.debug(f'Applying global before-step delay: {before_step_delay}s')
+                                time.sleep(before_step_delay)
                         
                         # Execute step actions
                         success = self._execute_step_actions(step, detections)
                         
                         # Apply global after-step delay
                         if self.current_scenario and self.current_scenario.global_delay:
-                            after_step_delay = self.current_scenario.global_delay.get('after_step', 0)
+                            after_step_delay = self.current_scenario.global_delay.get('after_step', 0.0)
                             if after_step_delay > 0:
-                                logger.debug(f'Applying global after-step delay: {after_step_delay}ms')
-                                time.sleep(after_step_delay / 1000.0)
+                                logger.debug(f'Applying global after-step delay: {after_step_delay}s')
+                                time.sleep(after_step_delay)
                         
                         if success:
                             self._step_cooldown[step_name] = current_time
@@ -1494,10 +1494,10 @@ class MainWindow(QtWidgets.QMainWindow):
         
         # Apply global before-action delay
         if self.current_scenario and self.current_scenario.global_delay:
-            before_delay = self.current_scenario.global_delay.get('before_action', 0)
+            before_delay = self.current_scenario.global_delay.get('before_action', 0.0)
             if before_delay > 0:
-                logger.debug(f'Applying global before-action delay: {before_delay}ms')
-                time.sleep(before_delay / 1000.0)
+                logger.debug(f'Applying global before-action delay: {before_delay}s')
+                time.sleep(before_delay)
         
         try:
             if act_type == 'click':
@@ -1537,10 +1537,10 @@ class MainWindow(QtWidgets.QMainWindow):
             
         # Apply global after-action delay
         if self.current_scenario and self.current_scenario.global_delay:
-            after_delay = self.current_scenario.global_delay.get('after_action', 0)
+            after_delay = self.current_scenario.global_delay.get('after_action', 0.0)
             if after_delay > 0:
-                logger.debug(f'Applying global after-action delay: {after_delay}ms')
-                time.sleep(after_delay / 1000.0)
+                logger.debug(f'Applying global after-action delay: {after_delay}s')
+                time.sleep(after_delay)
     def set_state(self, text):
         """
         Update the state label in the UI.
@@ -3190,63 +3190,71 @@ class MainWindow(QtWidgets.QMainWindow):
         steps_group_box.setLayout(steps_group_layout)
 
         # Global Delay Settings group
-        global_delay_group_box = QtWidgets.QGroupBox('Global Delay Settings (ms)')
+        global_delay_group_box = QtWidgets.QGroupBox('Global Delay Settings (seconds)')
         global_delay_group_box.setSizePolicy(QtWidgets.QSizePolicy.Policy.Preferred, QtWidgets.QSizePolicy.Policy.Fixed)
         global_delay_group_layout = QtWidgets.QGridLayout()
         global_delay_group_layout.setSpacing(8)
         global_delay_group_layout.setContentsMargins(8, 8, 8, 8)
         
-        # Action delays (top row)
-        action_label = QtWidgets.QLabel('Action Delays:')
-        action_label.setStyleSheet('font-weight: bold;')
-        global_delay_group_layout.addWidget(action_label, 0, 0, 1, 4)
-        
-        before_action_label = QtWidgets.QLabel('Before Action:')
-        self.before_action_spinbox = QtWidgets.QSpinBox()
-        self.before_action_spinbox.setRange(0, 10000)
-        self.before_action_spinbox.setValue(0)
-        self.before_action_spinbox.setSuffix(' ms')
-        self.before_action_spinbox.setToolTip('Delay before each action in milliseconds')
-        self.before_action_spinbox.valueChanged.connect(self._on_global_delay_changed)
-        
-        after_action_label = QtWidgets.QLabel('After Action:')
-        self.after_action_spinbox = QtWidgets.QSpinBox()
-        self.after_action_spinbox.setRange(0, 10000)
-        self.after_action_spinbox.setValue(0)
-        self.after_action_spinbox.setSuffix(' ms')
-        self.after_action_spinbox.setToolTip('Delay after each action in milliseconds')
-        self.after_action_spinbox.valueChanged.connect(self._on_global_delay_changed)
-        
-        global_delay_group_layout.addWidget(before_action_label, 1, 0)
-        global_delay_group_layout.addWidget(self.before_action_spinbox, 1, 1)
-        global_delay_group_layout.addWidget(after_action_label, 1, 2)
-        global_delay_group_layout.addWidget(self.after_action_spinbox, 1, 3)
-        
-        # Step delays (bottom row)
+        # Step delays (left side)
         step_label = QtWidgets.QLabel('Step Delays:')
         step_label.setStyleSheet('font-weight: bold;')
-        global_delay_group_layout.addWidget(step_label, 2, 0, 1, 4)
+        global_delay_group_layout.addWidget(step_label, 0, 0, 1, 2)
         
         before_step_label = QtWidgets.QLabel('Before Step:')
-        self.before_step_spinbox = QtWidgets.QSpinBox()
-        self.before_step_spinbox.setRange(0, 10000)
-        self.before_step_spinbox.setValue(0)
-        self.before_step_spinbox.setSuffix(' ms')
-        self.before_step_spinbox.setToolTip('Delay before each step execution in milliseconds')
+        self.before_step_spinbox = QtWidgets.QDoubleSpinBox()
+        self.before_step_spinbox.setRange(0.0, 60.0)
+        self.before_step_spinbox.setValue(0.0)
+        self.before_step_spinbox.setDecimals(2)
+        self.before_step_spinbox.setSingleStep(0.1)
+        self.before_step_spinbox.setSuffix(' s')
+        self.before_step_spinbox.setToolTip('Delay before each step execution in seconds')
         self.before_step_spinbox.valueChanged.connect(self._on_global_delay_changed)
         
         after_step_label = QtWidgets.QLabel('After Step:')
-        self.after_step_spinbox = QtWidgets.QSpinBox()
-        self.after_step_spinbox.setRange(0, 10000)
-        self.after_step_spinbox.setValue(0)
-        self.after_step_spinbox.setSuffix(' ms')
-        self.after_step_spinbox.setToolTip('Delay after each step execution in milliseconds')
+        self.after_step_spinbox = QtWidgets.QDoubleSpinBox()
+        self.after_step_spinbox.setRange(0.0, 60.0)
+        self.after_step_spinbox.setValue(0.0)
+        self.after_step_spinbox.setDecimals(2)
+        self.after_step_spinbox.setSingleStep(0.1)
+        self.after_step_spinbox.setSuffix(' s')
+        self.after_step_spinbox.setToolTip('Delay after each step execution in seconds')
         self.after_step_spinbox.valueChanged.connect(self._on_global_delay_changed)
         
-        global_delay_group_layout.addWidget(before_step_label, 3, 0)
-        global_delay_group_layout.addWidget(self.before_step_spinbox, 3, 1)
-        global_delay_group_layout.addWidget(after_step_label, 3, 2)
-        global_delay_group_layout.addWidget(self.after_step_spinbox, 3, 3)
+        global_delay_group_layout.addWidget(before_step_label, 1, 0)
+        global_delay_group_layout.addWidget(self.before_step_spinbox, 1, 1)
+        global_delay_group_layout.addWidget(after_step_label, 2, 0)
+        global_delay_group_layout.addWidget(self.after_step_spinbox, 2, 1)
+        
+        # Action delays (right side)
+        action_label = QtWidgets.QLabel('Action Delays:')
+        action_label.setStyleSheet('font-weight: bold;')
+        global_delay_group_layout.addWidget(action_label, 0, 2, 1, 2)
+        
+        before_action_label = QtWidgets.QLabel('Before Action:')
+        self.before_action_spinbox = QtWidgets.QDoubleSpinBox()
+        self.before_action_spinbox.setRange(0.0, 60.0)
+        self.before_action_spinbox.setValue(0.0)
+        self.before_action_spinbox.setDecimals(2)
+        self.before_action_spinbox.setSingleStep(0.1)
+        self.before_action_spinbox.setSuffix(' s')
+        self.before_action_spinbox.setToolTip('Delay before each action in seconds')
+        self.before_action_spinbox.valueChanged.connect(self._on_global_delay_changed)
+        
+        after_action_label = QtWidgets.QLabel('After Action:')
+        self.after_action_spinbox = QtWidgets.QDoubleSpinBox()
+        self.after_action_spinbox.setRange(0.0, 60.0)
+        self.after_action_spinbox.setValue(0.0)
+        self.after_action_spinbox.setDecimals(2)
+        self.after_action_spinbox.setSingleStep(0.1)
+        self.after_action_spinbox.setSuffix(' s')
+        self.after_action_spinbox.setToolTip('Delay after each action in seconds')
+        self.after_action_spinbox.valueChanged.connect(self._on_global_delay_changed)
+        
+        global_delay_group_layout.addWidget(before_action_label, 1, 2)
+        global_delay_group_layout.addWidget(self.before_action_spinbox, 1, 3)
+        global_delay_group_layout.addWidget(after_action_label, 2, 2)
+        global_delay_group_layout.addWidget(self.after_action_spinbox, 2, 3)
         
         global_delay_group_box.setLayout(global_delay_group_layout)
 
@@ -3423,9 +3431,9 @@ class MainWindow(QtWidgets.QMainWindow):
             
             # Auto-save the scenario with new delay settings
             self.current_scenario.save()
-            logger.info(f"Global delay updated: before_action={before_action_delay}ms, "
-                       f"after_action={after_action_delay}ms, before_step={before_step_delay}ms, "
-                       f"after_step={after_step_delay}ms")
+            logger.info(f"Global delay updated: before_action={before_action_delay}s, "
+                       f"after_action={after_action_delay}s, before_step={before_step_delay}s, "
+                       f"after_step={after_step_delay}s")
 
     def _log_combo_window(self, idx):
         """
@@ -4138,10 +4146,10 @@ class MainWindow(QtWidgets.QMainWindow):
             
             # Load global delay settings
             global_delay = self.current_scenario.global_delay
-            self.before_action_spinbox.setValue(global_delay.get('before_action', 0))
-            self.after_action_spinbox.setValue(global_delay.get('after_action', 0))
-            self.before_step_spinbox.setValue(global_delay.get('before_step', 0))
-            self.after_step_spinbox.setValue(global_delay.get('after_step', 0))
+            self.before_action_spinbox.setValue(global_delay.get('before_action', 0.0))
+            self.after_action_spinbox.setValue(global_delay.get('after_action', 0.0))
+            self.before_step_spinbox.setValue(global_delay.get('before_step', 0.0))
+            self.after_step_spinbox.setValue(global_delay.get('after_step', 0.0))
             
             # Reconnect signals
             self.before_action_spinbox.valueChanged.connect(self._on_global_delay_changed)
@@ -4154,10 +4162,10 @@ class MainWindow(QtWidgets.QMainWindow):
             self.after_action_spinbox.valueChanged.disconnect()
             self.before_step_spinbox.valueChanged.disconnect()
             self.after_step_spinbox.valueChanged.disconnect()
-            self.before_action_spinbox.setValue(0)
-            self.after_action_spinbox.setValue(0)
-            self.before_step_spinbox.setValue(0)
-            self.after_step_spinbox.setValue(0)
+            self.before_action_spinbox.setValue(0.0)
+            self.after_action_spinbox.setValue(0.0)
+            self.before_step_spinbox.setValue(0.0)
+            self.after_step_spinbox.setValue(0.0)
             self.before_action_spinbox.valueChanged.connect(self._on_global_delay_changed)
             self.after_action_spinbox.valueChanged.connect(self._on_global_delay_changed)
             self.before_step_spinbox.valueChanged.connect(self._on_global_delay_changed)
