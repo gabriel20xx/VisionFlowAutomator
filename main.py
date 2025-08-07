@@ -650,25 +650,39 @@ class Scenario:
     Represents a scenario, which consists of a name and a list of steps.
     Handles saving/loading scenario data to/from disk.
     """
-    def __init__(self, name, steps=None):
+    def __init__(self, name, steps=None, global_delay=None):
         """
-        Initialize a Scenario with a name and optional steps.
+        Initialize a Scenario with a name, optional steps, and global delay settings.
         """
         self.name = name
         self.steps = steps or []  # List of Step dicts
+        # Global delay settings - delays in milliseconds
+        self.global_delay = global_delay or {
+            'before_action': 0,  # Delay before each action in ms
+            'after_action': 0    # Delay after each action in ms
+        }
 
     def to_dict(self):
         """
         Return a dictionary representation of the scenario.
         """
-        return {'name': self.name, 'steps': self.steps}
+        return {
+            'name': self.name, 
+            'steps': self.steps,
+            'global_delay': self.global_delay
+        }
 
     @staticmethod
     def from_dict(data):
         """
         Create a Scenario object from a dictionary.
         """
-        return Scenario(data['name'], data.get('steps', []))
+        # Handle backward compatibility for scenarios without global_delay
+        global_delay = data.get('global_delay', {
+            'before_action': 0,
+            'after_action': 0
+        })
+        return Scenario(data['name'], data.get('steps', []), global_delay)
 
     def get_scenario_dir(self):
         """
@@ -1454,10 +1468,19 @@ class MainWindow(QtWidgets.QMainWindow):
     def _perform_step_action(self, action, loc, shape):
         """
         Perform a single step action (click, key, scroll, delay) at the given location.
+        Applies global delays before and after each action.
         """
         act_type = action['type']
         params = action['params']
         logger.debug(f'Performing step action: {act_type}, params={params}, loc={loc}, shape={shape}')
+        
+        # Apply global before-action delay
+        if self.current_scenario and self.current_scenario.global_delay:
+            before_delay = self.current_scenario.global_delay.get('before_action', 0)
+            if before_delay > 0:
+                logger.debug(f'Applying global before-action delay: {before_delay}ms')
+                time.sleep(before_delay / 1000.0)
+        
         try:
             if act_type == 'click':
                 pos_type = params.get('pos_type', 'center')
@@ -1493,6 +1516,13 @@ class MainWindow(QtWidgets.QMainWindow):
                 time.sleep(duration)
         except Exception as e:
             logger.error(f'Error performing step action {act_type}: {e}')
+            
+        # Apply global after-action delay
+        if self.current_scenario and self.current_scenario.global_delay:
+            after_delay = self.current_scenario.global_delay.get('after_action', 0)
+            if after_delay > 0:
+                logger.debug(f'Applying global after-action delay: {after_delay}ms')
+                time.sleep(after_delay / 1000.0)
     def set_state(self, text):
         """
         Update the state label in the UI.
@@ -3048,6 +3078,39 @@ class MainWindow(QtWidgets.QMainWindow):
         self.combo.currentIndexChanged.connect(self._log_combo_scenario)
         scenario_group_layout.addWidget(self.combo)
 
+        # Global delay settings
+        global_delay_layout = QtWidgets.QHBoxLayout()
+        global_delay_layout.setSpacing(8)
+        global_delay_layout.setContentsMargins(0, 5, 0, 5)
+        
+        # Before action delay
+        before_label = QtWidgets.QLabel('Before Action (ms):')
+        before_label.setMinimumWidth(100)
+        self.before_action_spinbox = QtWidgets.QSpinBox()
+        self.before_action_spinbox.setRange(0, 10000)
+        self.before_action_spinbox.setValue(0)
+        self.before_action_spinbox.setSuffix(' ms')
+        self.before_action_spinbox.setToolTip('Delay before each action in milliseconds')
+        self.before_action_spinbox.valueChanged.connect(self._on_global_delay_changed)
+        
+        # After action delay
+        after_label = QtWidgets.QLabel('After Action (ms):')
+        after_label.setMinimumWidth(95)
+        self.after_action_spinbox = QtWidgets.QSpinBox()
+        self.after_action_spinbox.setRange(0, 10000)
+        self.after_action_spinbox.setValue(0)
+        self.after_action_spinbox.setSuffix(' ms')
+        self.after_action_spinbox.setToolTip('Delay after each action in milliseconds')
+        self.after_action_spinbox.valueChanged.connect(self._on_global_delay_changed)
+        
+        global_delay_layout.addWidget(before_label)
+        global_delay_layout.addWidget(self.before_action_spinbox)
+        global_delay_layout.addWidget(after_label)
+        global_delay_layout.addWidget(self.after_action_spinbox)
+        global_delay_layout.addStretch()
+        
+        scenario_group_layout.addLayout(global_delay_layout)
+
         # Window selection dropdown
         self.window_combo = QtWidgets.QComboBox()
         self.window_combo.setMinimumWidth(90)
@@ -3287,6 +3350,23 @@ class MainWindow(QtWidgets.QMainWindow):
         """
         logger.info(f"UI: Scenario combo changed to index {idx} ({self.combo.currentText()})")
         self.select_scenario()
+
+    def _on_global_delay_changed(self):
+        """
+        Handle changes to global delay settings and auto-save scenario.
+        """
+        if self.current_scenario:
+            before_delay = self.before_action_spinbox.value()
+            after_delay = self.after_action_spinbox.value()
+            
+            self.current_scenario.global_delay = {
+                'before_action': before_delay,
+                'after_action': after_delay
+            }
+            
+            # Auto-save the scenario with new delay settings
+            self.current_scenario.save()
+            logger.info(f"Global delay updated: before={before_delay}ms, after={after_delay}ms")
 
     def _log_combo_window(self, idx):
         """
@@ -3984,11 +4064,35 @@ class MainWindow(QtWidgets.QMainWindow):
     def refresh_lists(self):
         """
         Refresh the step list widget with the current scenario's steps.
+        Also updates global delay controls.
         """
         logger.debug('Refreshing steps list.')
         self.steps_list.clear()
-        if not self.current_scenario:
+        
+        # Update global delay controls
+        if self.current_scenario:
+            # Temporarily disconnect signals to prevent triggering auto-save during loading
+            self.before_action_spinbox.valueChanged.disconnect()
+            self.after_action_spinbox.valueChanged.disconnect()
+            
+            # Load global delay settings
+            global_delay = self.current_scenario.global_delay
+            self.before_action_spinbox.setValue(global_delay.get('before_action', 0))
+            self.after_action_spinbox.setValue(global_delay.get('after_action', 0))
+            
+            # Reconnect signals
+            self.before_action_spinbox.valueChanged.connect(self._on_global_delay_changed)
+            self.after_action_spinbox.valueChanged.connect(self._on_global_delay_changed)
+        else:
+            # Reset to default values when no scenario is selected
+            self.before_action_spinbox.valueChanged.disconnect()
+            self.after_action_spinbox.valueChanged.disconnect()
+            self.before_action_spinbox.setValue(0)
+            self.after_action_spinbox.setValue(0)
+            self.before_action_spinbox.valueChanged.connect(self._on_global_delay_changed)
+            self.after_action_spinbox.valueChanged.connect(self._on_global_delay_changed)
             return
+            
         for step in self.current_scenario.steps:
             name = step.get('name', 'Unnamed Step')
             cond = step.get('condition', 'OR')
