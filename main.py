@@ -602,8 +602,9 @@ class TemplateCache:
     """
     Cache for template images to avoid reloading them repeatedly.
     Uses weak references to allow garbage collection when templates are no longer needed.
+    Optimized for low memory usage.
     """
-    def __init__(self, max_size=50):
+    def __init__(self, max_size=20):  # Reduced from 50 to 20 for memory efficiency
         self._cache = {}
         self._max_size = max_size
         self._access_times = {}
@@ -628,13 +629,16 @@ class TemplateCache:
         if not self._access_times:
             return
         
-        # Remove oldest 25% of entries
+        # Remove oldest 40% of entries (more aggressive cleanup)
         sorted_entries = sorted(self._access_times.items(), key=lambda x: x[1])
-        entries_to_remove = len(sorted_entries) // 4
+        entries_to_remove = max(1, len(sorted_entries) * 2 // 5)  # Remove at least 1, or 40%
         
         for path, _ in sorted_entries[:entries_to_remove]:
             self._cache.pop(path, None)
             self._access_times.pop(path, None)
+        
+        # Force garbage collection after cleanup
+        gc.collect()
     
     def clear(self):
         """Clear all cached templates."""
@@ -1316,10 +1320,23 @@ class MainWindow(QtWidgets.QMainWindow):
                 loop_time = time.time() - loop_start_time
                 self._update_performance_stats(loop_time)
                 
-                # Periodic cleanup
+                # Periodic cleanup and memory management
                 frame_count += 1
-                if frame_count % 100 == 0:  # Every 100 frames
+                current_time = time.time()
+                
+                # More frequent memory cleanup
+                if frame_count % 50 == 0:  # Every 50 frames (reduced from 100)
                     self._periodic_cleanup()
+                
+                # Garbage collection every 30 seconds
+                if current_time - last_gc_time > 30:
+                    gc.collect()
+                    last_gc_time = current_time
+                
+                # Clear screenshot cache periodically to prevent memory buildup
+                if (self._last_screenshot is not None and 
+                    current_time - self._last_screenshot_time > 2.0):  # Clear after 2 seconds
+                    self._last_screenshot = None
                 
                 # Dynamic sleep based on performance
                 sleep_time = max(0.05, 0.2 - loop_time) if not step_executed else 0.1
@@ -1753,15 +1770,21 @@ class MainWindow(QtWidgets.QMainWindow):
         # Memory optimization attributes
         self._last_screenshot = None
         self._last_screenshot_time = 0
-        self._screenshot_cache_duration = 0.05  # Cache screenshot for 50ms
+        self._screenshot_cache_duration = 0.03  # Reduced from 0.05 to 0.03 for faster memory freeing
         self._processing_step = False
         self._step_cooldown = {}  # Cooldown tracking for steps
         
         # Performance monitoring
         self._loop_times = []
-        self._max_loop_time_samples = 10
+        self._max_loop_time_samples = 5  # Reduced from 10 to 5 for memory efficiency
         self._last_warning_messages = {}  # Track last warning messages to prevent duplicates
         self._warning_cooldown = 30  # Seconds between duplicate warnings
+        
+        # Memory management
+        self._memory_cleanup_timer = QtCore.QTimer()
+        self._memory_cleanup_timer.timeout.connect(self._periodic_memory_cleanup)
+        self._memory_cleanup_timer.start(300000)  # Cleanup every 5 minutes
+        self._last_memory_cleanup = time.time()
         
         # Resource usage tracking for max/average values
         self._resource_history = {
@@ -1773,7 +1796,7 @@ class MainWindow(QtWidgets.QMainWindow):
             'gpu_utilization': [],
             'loop_times': []
         }
-        self._max_resource_samples = 50  # Keep last 50 samples for statistics
+        self._max_resource_samples = 30  # Reduced from 50 to 30 for memory efficiency
         
         self.init_ui()
         self.load_scenarios()
@@ -2053,7 +2076,10 @@ class MainWindow(QtWidgets.QMainWindow):
             else:
                 system_gpu_text = "GPU: Not detected\nClick for info"
                 system_gpu_color = colors['text_light']
-                self.system_gpu_label.mousePressEvent = lambda event: self._show_gpu_info()
+                # Clear any existing event handler first to prevent memory leaks
+                self.system_gpu_label.mousePressEvent = None
+                # Use a proper connection instead of lambda to prevent circular reference
+                self.system_gpu_label.mousePressEvent = self._on_gpu_label_clicked
                 self.system_gpu_label.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCursor))
             
             self.system_gpu_label.setText(system_gpu_text)
@@ -2086,7 +2112,10 @@ class MainWindow(QtWidgets.QMainWindow):
             else:
                 program_ram_text = "RAM: N/A\npsutil needed"
                 program_ram_color = colors['warning']
-                self.program_ram_label.mousePressEvent = lambda event: self._show_psutil_info()
+                # Clear any existing event handler first to prevent memory leaks
+                self.program_ram_label.mousePressEvent = None
+                # Use a proper connection instead of lambda to prevent circular reference
+                self.program_ram_label.mousePressEvent = self._on_ram_label_clicked
                 self.program_ram_label.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCursor))
             
             self.program_ram_label.setText(program_ram_text)
@@ -2151,6 +2180,12 @@ class MainWindow(QtWidgets.QMainWindow):
             self.monitor_timer.stop()
         if hasattr(self, 'theme_monitor_timer') and self.theme_monitor_timer:
             self.theme_monitor_timer.stop()
+        if hasattr(self, '_memory_cleanup_timer') and self._memory_cleanup_timer:
+            self._memory_cleanup_timer.stop()
+        
+        # Clear caches when monitoring stops
+        self._last_screenshot = None
+        gc.collect()
     
     def _show_psutil_info(self):
         """Show information about installing psutil for enhanced monitoring."""
@@ -2199,6 +2234,14 @@ class MainWindow(QtWidgets.QMainWindow):
         )
         msg.setStandardButtons(QtWidgets.QMessageBox.StandardButton.Ok)
         msg.exec()
+    
+    def _on_gpu_label_clicked(self, event):
+        """Handle GPU label click event without lambda to prevent memory leaks."""
+        self._show_gpu_info()
+    
+    def _on_ram_label_clicked(self, event):
+        """Handle RAM label click event without lambda to prevent memory leaks."""
+        self._show_psutil_info()
     
     def _on_update_interval_changed(self):
         """Handle resource monitoring update interval change."""
@@ -2448,18 +2491,60 @@ class MainWindow(QtWidgets.QMainWindow):
         event.accept()
     
     def cleanup_resources(self):
-        """Clean up resources to prevent memory leaks."""
+        """Enhanced cleanup to prevent memory leaks."""
         if self.running:
             self.stop_automation()
         
-        # Stop monitoring timer
+        # Stop and disconnect all timers
         self.stop_monitoring()
+        
+        # Disconnect all signal connections to prevent circular references
+        try:
+            # Disconnect timer signals
+            if hasattr(self, 'monitor_timer') and self.monitor_timer:
+                self.monitor_timer.timeout.disconnect()
+                self.monitor_timer.stop()
+                self.monitor_timer.deleteLater()
+                self.monitor_timer = None
+                
+            if hasattr(self, 'theme_monitor_timer') and self.theme_monitor_timer:
+                self.theme_monitor_timer.timeout.disconnect()
+                self.theme_monitor_timer.stop()
+                self.theme_monitor_timer.deleteLater()
+                self.theme_monitor_timer = None
+                
+            if hasattr(self, '_memory_cleanup_timer') and self._memory_cleanup_timer:
+                self._memory_cleanup_timer.timeout.disconnect()
+                self._memory_cleanup_timer.stop()
+                self._memory_cleanup_timer.deleteLater()
+                self._memory_cleanup_timer = None
+            
+            # Clear event handlers that use lambda functions to prevent circular references
+            if hasattr(self, 'system_gpu_label'):
+                self.system_gpu_label.mousePressEvent = None
+                self.system_gpu_label.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.ArrowCursor))
+                
+            if hasattr(self, 'program_ram_label'):
+                self.program_ram_label.mousePressEvent = None
+                self.program_ram_label.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.ArrowCursor))
+                
+        except Exception as e:
+            logger.debug(f"Error disconnecting signals: {e}")
         
         # Clear template cache
         template_cache.clear()
         
         # Clear screenshot cache
         self._last_screenshot = None
+        self._last_screenshot_time = 0
+        
+        # Clear GPU memory cache
+        if hasattr(get_gpu_memory_info, '_cached_info'):
+            delattr(get_gpu_memory_info, '_cached_info')
+        if hasattr(get_gpu_memory_info, '_cache_time'):
+            delattr(get_gpu_memory_info, '_cache_time')
+        if hasattr(get_gpu_memory_info, '_updating'):
+            delattr(get_gpu_memory_info, '_updating')
         
         # Clear performance tracking
         if hasattr(self, '_loop_times'):
@@ -2470,10 +2555,99 @@ class MainWindow(QtWidgets.QMainWindow):
             for key in self._resource_history:
                 self._resource_history[key].clear()
         
-        # Force garbage collection
-        gc.collect()
+        # Clear warning message cache
+        if hasattr(self, '_last_warning_messages'):
+            self._last_warning_messages.clear()
+        
+        # Clear any geometry save timer
+        if hasattr(self, '_geometry_save_timer'):
+            self._geometry_save_timer.stop()
+            self._geometry_save_timer.deleteLater()
+            self._geometry_save_timer = None
+        
+        # Clear dialog-related attributes to prevent references
+        if hasattr(self, '_edit_step_idx'):
+            delattr(self, '_edit_step_idx')
+        if hasattr(self, '_step_dialog') and self._step_dialog:
+            self._step_dialog.deleteLater()
+            self._step_dialog = None
+        
+        # Clear image preview pixmaps if any dialogs are open
+        try:
+            for widget in QtWidgets.QApplication.allWidgets():
+                if hasattr(widget, 'img_preview') and hasattr(widget.img_preview, 'clear'):
+                    widget.img_preview.clear()
+                # Disconnect any remaining signal connections
+                if hasattr(widget, 'disconnect'):
+                    try:
+                        widget.disconnect()
+                    except:
+                        pass
+        except:
+            pass
+        
+        # Force garbage collection multiple times for better cleanup
+        for _ in range(3):
+            gc.collect()
         
         logger.info("Resources cleaned up successfully")
+
+    def _periodic_memory_cleanup(self):
+        """Periodic memory cleanup to prevent memory accumulation."""
+        current_time = time.time()
+        
+        # Only cleanup if enough time has passed since last cleanup
+        if current_time - self._last_memory_cleanup < 300:  # 5 minutes
+            return
+        
+        try:
+            # Clear old screenshot cache if not used recently
+            if (self._last_screenshot is not None and 
+                current_time - self._last_screenshot_time > 60):  # 1 minute old
+                self._last_screenshot = None
+                self._last_screenshot_time = 0
+            
+            # Limit resource history size to prevent memory growth
+            max_history_size = 50  # Reduced from default to save memory
+            if hasattr(self, '_resource_history'):
+                for key in self._resource_history:
+                    if len(self._resource_history[key]) > max_history_size:
+                        # Keep only the most recent entries
+                        self._resource_history[key] = self._resource_history[key][-max_history_size:]
+            
+            # Limit loop times tracking
+            if hasattr(self, '_loop_times') and len(self._loop_times) > self._max_loop_time_samples:
+                self._loop_times = self._loop_times[-self._max_loop_time_samples:]
+            
+            # Clear old step cooldowns (older than 10 minutes)
+            if hasattr(self, '_step_cooldown'):
+                cutoff_time = current_time - 600  # 10 minutes
+                self._step_cooldown = {k: v for k, v in self._step_cooldown.items() if v > cutoff_time}
+            
+            # Clear old warning message cache
+            if hasattr(self, '_last_warning_messages'):
+                cutoff_time = current_time - self._warning_cooldown * 2
+                self._last_warning_messages = {
+                    k: v for k, v in self._last_warning_messages.items() 
+                    if v[0] > cutoff_time
+                }
+            
+            # Template cache cleanup - remove least recently used items if cache is large
+            if hasattr(template_cache, '_cache') and len(template_cache._cache) > 15:
+                # Clear 1/3 of the cache to reduce memory
+                items_to_remove = len(template_cache._cache) // 3
+                cache_items = list(template_cache._cache.items())
+                for i in range(items_to_remove):
+                    del template_cache._cache[cache_items[i][0]]
+            
+            # Force garbage collection
+            gc.collect()
+            
+            self._last_memory_cleanup = current_time
+            logger.debug("Periodic memory cleanup completed")
+            
+        except Exception as e:
+            logger.debug(f"Error during periodic memory cleanup: {e}")
 
     def is_system_dark_theme(self):
         """
@@ -3702,6 +3876,12 @@ class MainWindow(QtWidgets.QMainWindow):
         self._step_dialog.deleteLater()
         self._step_dialog = None
 
+    def _on_edit_step_accepted_handler(self):
+        """Handler to avoid lambda function for edit step dialog"""
+        if hasattr(self, '_edit_step_idx'):
+            self._on_edit_step_accepted(self._edit_step_idx)
+            delattr(self, '_edit_step_idx')
+
     def edit_step(self):
         """
         Open the dialog to edit the selected step in the current scenario.
@@ -3711,7 +3891,8 @@ class MainWindow(QtWidgets.QMainWindow):
             return
         step = self.current_scenario.steps[idx]
         self._step_dialog = StepDialog(self, step)
-        self._step_dialog.accepted.connect(lambda: self._on_edit_step_accepted(idx))
+        self._edit_step_idx = idx  # Store idx to avoid lambda
+        self._step_dialog.accepted.connect(self._on_edit_step_accepted_handler)
         self._step_dialog.show()
 
     def _on_edit_step_accepted(self, idx):
