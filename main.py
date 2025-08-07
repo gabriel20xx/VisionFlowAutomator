@@ -5165,18 +5165,7 @@ class ActionDialog(QtWidgets.QDialog):
         return {'type': self.type_combo.currentText(), 'params': params, 'image_refs': image_refs, 'logic': logic}
 
 if __name__ == '__main__':
-    # Set DPI awareness before creating QApplication to prevent access denied error
-    import os
-    if os.name == 'nt':  # Windows
-        try:
-            from PyQt6.QtCore import Qt
-            # Set high DPI scaling policy before creating QApplication
-            QtWidgets.QApplication.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
-            QtWidgets.QApplication.setAttribute(Qt.ApplicationAttribute.AA_EnableHighDpiScaling, True)
-            QtWidgets.QApplication.setAttribute(Qt.ApplicationAttribute.AA_UseHighDpiPixmaps, True)
-        except Exception as e:
-            logger.debug(f"DPI awareness setup failed: {e}")
-    
+    # qt.conf handles DPI awareness to prevent access denied errors
     app = QtWidgets.QApplication(sys.argv)
     win = MainWindow()
     win.show()
