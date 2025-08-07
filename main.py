@@ -1612,6 +1612,7 @@ class MainWindow(QtWidgets.QMainWindow):
             
             # Get system info
             system_memory = psutil.virtual_memory()
+            system_cpu = psutil.cpu_percent(interval=0.1)  # System-wide CPU usage
             
             # Get GPU information with error handling (non-blocking)
             try:
@@ -1623,7 +1624,8 @@ class MainWindow(QtWidgets.QMainWindow):
             return {
                 'process_memory_mb': memory_info.rss / 1024 / 1024,  # MB
                 'process_memory_percent': process.memory_percent(),
-                'cpu_percent': cpu_percent,
+                'cpu_percent': cpu_percent,  # Process CPU
+                'system_cpu_percent': system_cpu,  # System-wide CPU
                 'system_memory_percent': system_memory.percent,
                 'system_memory_available_gb': system_memory.available / 1024 / 1024 / 1024,  # GB
                 'template_cache_size': len(template_cache._cache) if hasattr(template_cache, '_cache') else 0,
@@ -1644,6 +1646,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 'process_memory_mb': 0,
                 'process_memory_percent': 0,
                 'cpu_percent': 0,
+                'system_cpu_percent': 0,
                 'system_memory_percent': 0,
                 'system_memory_available_gb': 0,
                 'template_cache_size': len(template_cache._cache) if hasattr(template_cache, '_cache') else 0,
@@ -1761,6 +1764,7 @@ class MainWindow(QtWidgets.QMainWindow):
             'memory_mb': [],
             'memory_percent': [],
             'cpu_percent': [],
+            'system_cpu_percent': [],  # System-wide CPU usage
             'system_memory_percent': [],
             'gpu_utilization': [],
             'loop_times': []
@@ -1832,6 +1836,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 self._resource_history['memory_mb'].append(memory_info['process_memory_mb'])
                 self._resource_history['memory_percent'].append(memory_info['process_memory_percent'])
                 self._resource_history['cpu_percent'].append(memory_info['cpu_percent'])
+                self._resource_history['system_cpu_percent'].append(memory_info['system_cpu_percent'])
                 self._resource_history['system_memory_percent'].append(memory_info['system_memory_percent'])
             
             if memory_info.get('gpu_has_gpu', False):
@@ -1992,8 +1997,8 @@ class MainWindow(QtWidgets.QMainWindow):
             
             # System CPU usage
             if memory_info.get('has_psutil', False):
-                current_cpu, max_cpu, avg_cpu = self._get_resource_stats(self._resource_history['cpu_percent'])
-                system_cpu_text = f"CPU: {current_cpu:.1f}%\nMax: {max_cpu:.1f}%"
+                current_cpu, max_cpu, avg_cpu = self._get_resource_stats(self._resource_history['system_cpu_percent'])
+                system_cpu_text = f"CPU: {current_cpu:.1f}%\nAvg: {avg_cpu:.1f}% | Max: {max_cpu:.1f}%"
                 system_cpu_color = colors['error'] if current_cpu > 80 else colors['warning'] if current_cpu > 60 else colors['success']
             else:
                 system_cpu_text = "CPU: N/A\npsutil needed"
@@ -2005,7 +2010,7 @@ class MainWindow(QtWidgets.QMainWindow):
             # System RAM usage
             if memory_info.get('has_psutil', False):
                 current_sys, max_sys, avg_sys = self._get_resource_stats(self._resource_history['system_memory_percent'])
-                system_ram_text = f"RAM: {current_sys:.1f}%\n({memory_info['system_memory_available_gb']:.1f}GB free)"
+                system_ram_text = f"RAM: {current_sys:.1f}% ({memory_info['system_memory_available_gb']:.1f}GB free)\nAvg: {avg_sys:.1f}% | Max: {max_sys:.1f}%"
                 system_ram_color = colors['error'] if current_sys > 85 else colors['warning'] if current_sys > 70 else colors['success']
             else:
                 system_ram_text = "RAM: N/A\npsutil needed"
@@ -2022,10 +2027,10 @@ class MainWindow(QtWidgets.QMainWindow):
                 current_gpu, max_gpu, avg_gpu = self._get_resource_stats(self._resource_history['gpu_utilization'])
                 
                 if gpu_total_mb > 0:
-                    system_gpu_text = f"GPU: {current_gpu:.1f}%\n{gpu_used_mb:.0f}/{gpu_total_mb:.0f}MB"
+                    system_gpu_text = f"GPU: {current_gpu:.1f}% ({gpu_used_mb:.0f}/{gpu_total_mb:.0f}MB)\nAvg: {avg_gpu:.1f}% | Max: {max_gpu:.1f}%"
                     system_gpu_color = colors['error'] if current_gpu > 80 else colors['warning'] if current_gpu > 60 else colors['success']
                 else:
-                    system_gpu_text = f"GPU: {current_gpu:.1f}%\nDetected"
+                    system_gpu_text = f"GPU: {current_gpu:.1f}% Detected\nAvg: {avg_gpu:.1f}% | Max: {max_gpu:.1f}%"
                     system_gpu_color = colors['info']
                 
                 gpu_name = memory_info.get('gpu_name', 'Unknown GPU')
@@ -2063,7 +2068,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 current_mb, max_mb, avg_mb = self._get_resource_stats(self._resource_history['memory_mb'])
                 current_pct, max_pct, avg_pct = self._get_resource_stats(self._resource_history['memory_percent'])
                 
-                program_ram_text = f"RAM: {current_mb:.1f}MB\n({current_pct:.1f}% process)"
+                program_ram_text = f"RAM: {current_mb:.1f}MB ({current_pct:.1f}%)\nAvg: {avg_mb:.1f}MB | Max: {max_mb:.1f}MB"
                 program_ram_color = colors['error'] if current_mb > 500 else colors['warning'] if current_mb > 200 else colors['success']
             else:
                 program_ram_text = "RAM: N/A\npsutil needed"
