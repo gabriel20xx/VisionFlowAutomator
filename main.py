@@ -3267,38 +3267,47 @@ class MainWindow(QtWidgets.QMainWindow):
         self.state_label = QtWidgets.QLabel('State: Paused')
         self.state_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignLeft | QtCore.Qt.AlignmentFlag.AlignVCenter)
 
-        # Resource usage display
-        self.resource_group = QtWidgets.QGroupBox('Resource Usage')
-        self.resource_group.setSizePolicy(QtWidgets.QSizePolicy.Policy.Preferred, QtWidgets.QSizePolicy.Policy.Fixed)
-        resource_layout = QtWidgets.QGridLayout()
-        resource_layout.setSpacing(4)
-        resource_layout.setContentsMargins(6, 6, 6, 6)
+        # System Resources display (computer-wide)
+        self.system_resource_group = QtWidgets.QGroupBox('System Resources')
+        self.system_resource_group.setSizePolicy(QtWidgets.QSizePolicy.Policy.Preferred, QtWidgets.QSizePolicy.Policy.Fixed)
+        system_resource_layout = QtWidgets.QGridLayout()
+        system_resource_layout.setSpacing(4)
+        system_resource_layout.setContentsMargins(6, 6, 6, 6)
 
-        # Memory usage
-        self.memory_label = QtWidgets.QLabel('Memory: --')
-        resource_layout.addWidget(self.memory_label, 0, 0)
-
-        # CPU usage
+        # System CPU usage
         self.cpu_label = QtWidgets.QLabel('CPU: --')
-        resource_layout.addWidget(self.cpu_label, 0, 1)
-
-        # GPU memory info (moved up)
-        self.gpu_label = QtWidgets.QLabel('GPU: --')
-        resource_layout.addWidget(self.gpu_label, 0, 2)
+        system_resource_layout.addWidget(self.cpu_label, 0, 0)
 
         # System memory
-        self.system_memory_label = QtWidgets.QLabel('System: --')
-        resource_layout.addWidget(self.system_memory_label, 1, 0)
+        self.system_memory_label = QtWidgets.QLabel('System Memory: --')
+        system_resource_layout.addWidget(self.system_memory_label, 0, 1)
+
+        # GPU memory info
+        self.gpu_label = QtWidgets.QLabel('GPU: --')
+        system_resource_layout.addWidget(self.gpu_label, 0, 2)
+
+        self.system_resource_group.setLayout(system_resource_layout)
+
+        # Program Usage display (application-specific)
+        self.program_usage_group = QtWidgets.QGroupBox('Program Usage')
+        self.program_usage_group.setSizePolicy(QtWidgets.QSizePolicy.Policy.Preferred, QtWidgets.QSizePolicy.Policy.Fixed)
+        program_usage_layout = QtWidgets.QGridLayout()
+        program_usage_layout.setSpacing(4)
+        program_usage_layout.setContentsMargins(6, 6, 6, 6)
+
+        # Program memory usage
+        self.memory_label = QtWidgets.QLabel('Memory: --')
+        program_usage_layout.addWidget(self.memory_label, 0, 0)
 
         # Cache info
         self.cache_label = QtWidgets.QLabel('Cache: --')
-        resource_layout.addWidget(self.cache_label, 1, 1)
+        program_usage_layout.addWidget(self.cache_label, 0, 1)
 
-        # Performance info (moved down)
+        # Performance info
         self.performance_label = QtWidgets.QLabel('Performance: --')
-        resource_layout.addWidget(self.performance_label, 1, 2)
+        program_usage_layout.addWidget(self.performance_label, 0, 2)
 
-        self.resource_group.setLayout(resource_layout)
+        self.program_usage_group.setLayout(program_usage_layout)
 
         # Main layout
         layout = QtWidgets.QGridLayout()
@@ -3316,9 +3325,13 @@ class MainWindow(QtWidgets.QMainWindow):
         layout.addWidget(global_delay_group_box, 4, 0, 1, 5)
         layout.setRowStretch(4, 0)  # Global delay group should not stretch vertically
 
-        # Resource usage group
-        layout.addWidget(self.resource_group, 5, 0, 1, 5)
-        layout.setRowStretch(5, 0)  # Resource group should not stretch vertically
+        # System resources group
+        layout.addWidget(self.system_resource_group, 5, 0, 1, 5)
+        layout.setRowStretch(5, 0)  # System resource group should not stretch vertically
+        
+        # Program usage group
+        layout.addWidget(self.program_usage_group, 6, 0, 1, 5)
+        layout.setRowStretch(6, 0)  # Program usage group should not stretch vertically
 
         # Start/State row in a group
         start_state_group = QtWidgets.QGroupBox()
@@ -3386,8 +3399,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.update_interval_combo.currentIndexChanged.connect(self._on_update_interval_changed)
         
         start_state_group.setLayout(start_state_layout)
-        layout.addWidget(start_state_group, 6, 0, 1, 5)
-        layout.setRowStretch(6, 0)  # Prevent vertical stretch
+        layout.addWidget(start_state_group, 7, 0, 1, 5)
+        layout.setRowStretch(7, 0)  # Prevent vertical stretch
 
         # Set central widget (must be at the end of init_ui)
         central = QtWidgets.QWidget()
