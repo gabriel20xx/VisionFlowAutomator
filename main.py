@@ -1944,11 +1944,16 @@ class MainWindow(QtWidgets.QMainWindow):
             logger.debug(f"Performance monitoring error: {e}")
             # If monitoring fails, show basic error info
             try:
-                self.memory_label.setText("Memory: Monitor Error")
-                self.cpu_label.setText("CPU: Monitor Error") 
-                self.system_memory_label.setText("System: Monitor Error")
+                # System resource errors
+                self.system_cpu_label.setText("CPU: Monitor Error")
+                self.system_ram_label.setText("RAM: Monitor Error")
+                self.system_gpu_label.setText("GPU: Monitor Error")
+                
+                # Program usage errors
+                self.program_cpu_label.setText("CPU: Monitor Error")
+                self.program_ram_label.setText("RAM: Monitor Error") 
+                self.program_gpu_label.setText("GPU: Monitor Error")
                 self.cache_label.setText("Cache: Monitor Error")
-                self.gpu_label.setText("GPU: Monitor Error")
                 self.performance_label.setText(f"Monitor Error: {str(e)[:30]}...")
             except:
                 pass  # If even setting error text fails, just ignore
@@ -1975,6 +1980,7 @@ class MainWindow(QtWidgets.QMainWindow):
     def _update_resource_display(self, memory_info):
         """
         Update the resource usage display in the UI with theme-aware colors and max/average statistics.
+        Now populates both system resources and program usage sections.
         """
         try:
             colors = self.get_theme_styles()
@@ -1982,118 +1988,117 @@ class MainWindow(QtWidgets.QMainWindow):
             # Update resource history for statistics
             self._update_resource_history(memory_info)
             
-            # Memory usage with statistics
+            # === SYSTEM RESOURCES SECTION ===
+            
+            # System CPU usage
+            if memory_info.get('has_psutil', False):
+                current_cpu, max_cpu, avg_cpu = self._get_resource_stats(self._resource_history['cpu_percent'])
+                system_cpu_text = f"CPU: {current_cpu:.1f}%\nMax: {max_cpu:.1f}%"
+                system_cpu_color = colors['error'] if current_cpu > 80 else colors['warning'] if current_cpu > 60 else colors['success']
+            else:
+                system_cpu_text = "CPU: N/A\npsutil needed"
+                system_cpu_color = colors['text_light']
+            
+            self.system_cpu_label.setText(system_cpu_text)
+            self.system_cpu_label.setStyleSheet(f'font-size: 9pt; color: {system_cpu_color};')
+            
+            # System RAM usage
+            if memory_info.get('has_psutil', False):
+                current_sys, max_sys, avg_sys = self._get_resource_stats(self._resource_history['system_memory_percent'])
+                system_ram_text = f"RAM: {current_sys:.1f}%\n({memory_info['system_memory_available_gb']:.1f}GB free)"
+                system_ram_color = colors['error'] if current_sys > 85 else colors['warning'] if current_sys > 70 else colors['success']
+            else:
+                system_ram_text = "RAM: N/A\npsutil needed"
+                system_ram_color = colors['text_light']
+            
+            self.system_ram_label.setText(system_ram_text)
+            self.system_ram_label.setStyleSheet(f'font-size: 9pt; color: {system_ram_color};')
+            
+            # System GPU usage
+            gpu_method = memory_info.get('gpu_method', 'unknown')
+            if memory_info.get('gpu_has_gpu', False):
+                gpu_used_mb = memory_info.get('gpu_used_mb', 0)
+                gpu_total_mb = memory_info.get('gpu_total_mb', 0)
+                current_gpu, max_gpu, avg_gpu = self._get_resource_stats(self._resource_history['gpu_utilization'])
+                
+                if gpu_total_mb > 0:
+                    system_gpu_text = f"GPU: {current_gpu:.1f}%\n{gpu_used_mb:.0f}/{gpu_total_mb:.0f}MB"
+                    system_gpu_color = colors['error'] if current_gpu > 80 else colors['warning'] if current_gpu > 60 else colors['success']
+                else:
+                    system_gpu_text = f"GPU: {current_gpu:.1f}%\nDetected"
+                    system_gpu_color = colors['info']
+                
+                gpu_name = memory_info.get('gpu_name', 'Unknown GPU')
+                self.system_gpu_label.setToolTip(f"GPU: {gpu_name} (detected via {gpu_method})")
+            elif gpu_method == 'loading':
+                system_gpu_text = "GPU: Loading...\nDetecting"
+                system_gpu_color = colors['warning']
+                self.system_gpu_label.setToolTip("GPU detection in progress...")
+            else:
+                system_gpu_text = "GPU: Not detected\nClick for info"
+                system_gpu_color = colors['text_light']
+                self.system_gpu_label.mousePressEvent = lambda event: self._show_gpu_info()
+                self.system_gpu_label.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCursor))
+            
+            self.system_gpu_label.setText(system_gpu_text)
+            self.system_gpu_label.setStyleSheet(f'font-size: 9pt; color: {system_gpu_color};')
+            
+            # === PROGRAM USAGE SECTION ===
+            
+            # Program CPU usage (estimated based on process activity)
+            if memory_info.get('has_psutil', False) and hasattr(self, '_loop_times') and self._loop_times:
+                current_loop, max_loop, avg_loop = self._get_resource_stats(self._resource_history['loop_times'])
+                estimated_cpu = min(100, (current_loop / 50) * 10)  # Scale loop time to CPU estimate
+                program_cpu_text = f"CPU: ~{estimated_cpu:.1f}%\nLoop: {current_loop:.0f}ms"
+                program_cpu_color = colors['error'] if estimated_cpu > 20 else colors['warning'] if estimated_cpu > 10 else colors['success']
+            else:
+                program_cpu_text = "CPU: --\nNot running"
+                program_cpu_color = colors['text_light']
+            
+            self.program_cpu_label.setText(program_cpu_text)
+            self.program_cpu_label.setStyleSheet(f'font-size: 9pt; color: {program_cpu_color};')
+            
+            # Program RAM usage
             if memory_info.get('has_psutil', False):
                 current_mb, max_mb, avg_mb = self._get_resource_stats(self._resource_history['memory_mb'])
                 current_pct, max_pct, avg_pct = self._get_resource_stats(self._resource_history['memory_percent'])
                 
-                memory_text = f"Memory: {current_mb:.1f}MB ({current_pct:.1f}%)\nAvg: {avg_mb:.1f}MB ({avg_pct:.1f}%) | Max: {max_mb:.1f}MB ({max_pct:.1f}%)"
-                memory_color = colors['error'] if current_pct > 10 else colors['success']
+                program_ram_text = f"RAM: {current_mb:.1f}MB\n({current_pct:.1f}% process)"
+                program_ram_color = colors['error'] if current_mb > 500 else colors['warning'] if current_mb > 200 else colors['success']
             else:
-                memory_text = "Memory: N/A (psutil needed)\nInstall psutil for detailed monitoring"
-                memory_color = colors['warning']
+                program_ram_text = "RAM: N/A\npsutil needed"
+                program_ram_color = colors['warning']
+                self.program_ram_label.mousePressEvent = lambda event: self._show_psutil_info()
+                self.program_ram_label.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCursor))
             
-            self.memory_label.setText(memory_text)
-            self.memory_label.setStyleSheet(f'font-size: 9pt; color: {memory_color};')
+            self.program_ram_label.setText(program_ram_text)
+            self.program_ram_label.setStyleSheet(f'font-size: 9pt; color: {program_ram_color};')
             
-            # Make memory label clickable to show psutil installation info
-            if not memory_info.get('has_psutil', False):
-                self.memory_label.mousePressEvent = lambda event: self._show_psutil_info()
-                self.memory_label.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCursor))
-            
-            # CPU usage with statistics
-            if memory_info.get('has_psutil', False):
-                current_cpu, max_cpu, avg_cpu = self._get_resource_stats(self._resource_history['cpu_percent'])
-                
-                cpu_text = f"CPU: {current_cpu:.1f}%\nAvg: {avg_cpu:.1f}% | Max: {max_cpu:.1f}%"
-                cpu_color = colors['error'] if current_cpu > 50 else colors['success']
+            # Program GPU usage (template processing related)
+            if memory_info.get('gpu_has_gpu', False):
+                program_gpu_text = "GPU: N/A\nCPU-based CV"
+                program_gpu_color = colors['info']
             else:
-                cpu_text = "CPU: N/A\nInstall psutil for monitoring"
-                cpu_color = colors['text_light']
+                program_gpu_text = "GPU: N/A\nCPU processing"
+                program_gpu_color = colors['text_light']
             
-            self.cpu_label.setText(cpu_text)
-            self.cpu_label.setStyleSheet(f'font-size: 9pt; color: {cpu_color};')
+            self.program_gpu_label.setText(program_gpu_text)
+            self.program_gpu_label.setStyleSheet(f'font-size: 9pt; color: {program_gpu_color};')
             
-            # System memory with statistics
-            if memory_info.get('has_psutil', False):
-                current_sys, max_sys, avg_sys = self._get_resource_stats(self._resource_history['system_memory_percent'])
-                
-                system_text = f"System: {current_sys:.1f}% ({memory_info['system_memory_available_gb']:.1f}GB free)\nAvg: {avg_sys:.1f}% | Max: {max_sys:.1f}%"
-                system_color = colors['error'] if current_sys > 85 else colors['success']
-            else:
-                system_text = "System: N/A\nInstall psutil for monitoring"
-                system_color = colors['text_light']
-            
-            self.system_memory_label.setText(system_text)
-            self.system_memory_label.setStyleSheet(f'font-size: 9pt; color: {system_color};')
-            
-            # Cache info (enhanced display)
+            # Cache info
             cache_text = f"Cache: {memory_info['template_cache_size']} templates\n{memory_info['cooldown_entries']} cooldowns"
             cache_color = colors['warning'] if memory_info['template_cache_size'] > 20 else colors['info']
             
             self.cache_label.setText(cache_text)
             self.cache_label.setStyleSheet(f'font-size: 9pt; color: {cache_color};')
             
-            # GPU memory info with statistics
-            gpu_method = memory_info.get('gpu_method', 'unknown')
-            
-            if memory_info.get('gpu_has_gpu', False):
-                gpu_used_mb = memory_info.get('gpu_used_mb', 0)
-                gpu_total_mb = memory_info.get('gpu_total_mb', 0)
-                gpu_utilization = memory_info.get('gpu_utilization_percent', 0)
-                
-                # Get GPU statistics
-                current_gpu, max_gpu, avg_gpu = self._get_resource_stats(self._resource_history['gpu_utilization'])
-                
-                if gpu_total_mb > 0:
-                    gpu_text = f"GPU: {gpu_used_mb:.0f}/{gpu_total_mb:.0f}MB ({current_gpu:.1f}%)\nAvg: {avg_gpu:.1f}% | Max: {max_gpu:.1f}%"
-                    gpu_color = colors['error'] if current_gpu > 80 else colors['warning'] if current_gpu > 60 else colors['success']
-                    
-                    # Add GPU name as tooltip
-                    gpu_name = memory_info.get('gpu_name', 'Unknown GPU')
-                    self.gpu_label.setToolTip(f"GPU: {gpu_name} (detected via {gpu_method})")
-                else:
-                    gpu_text = f"GPU: Detected ({gpu_method})\nUtilization: {current_gpu:.1f}%"
-                    gpu_color = colors['info']
-                    gpu_name = memory_info.get('gpu_name', 'Unknown GPU')
-                    self.gpu_label.setToolTip(f"GPU: {gpu_name} (limited info via {gpu_method})")
-            elif gpu_method == 'loading':
-                gpu_text = "GPU: Loading...\nDetection in progress"
-                gpu_color = colors['warning']
-                self.gpu_label.setToolTip("GPU detection in progress...")
-            else:
-                gpu_text = "GPU: Not detected\nClick for setup info"
-                gpu_color = colors['text_light']
-                self.gpu_label.setToolTip(
-                    "No GPU detected or GPU monitoring libraries not available.\n\n"
-                    "For enhanced GPU monitoring:\n"
-                    "• NVIDIA GPUs: pip install pynvml or GPUtil\n"
-                    "• Integrated GPUs: Built-in Windows WMI support\n"
-                    "• Linux: lspci and DRM detection\n"
-                    "• macOS: system_profiler integration\n\n"
-                    "Click for more information about GPU monitoring."
-                )
-            
-            self.gpu_label.setText(gpu_text)
-            self.gpu_label.setStyleSheet(f'font-size: 9pt; color: {gpu_color};')
-            
-            # Make GPU label clickable to show GPU info when no GPU detected or loading
-            if not memory_info.get('gpu_has_gpu', False) and gpu_method != 'loading':
-                self.gpu_label.mousePressEvent = lambda event: self._show_gpu_info()
-                self.gpu_label.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCursor))
-            else:
-                # Remove click handler if GPU is detected or loading
-                self.gpu_label.mousePressEvent = None
-                self.gpu_label.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.ArrowCursor))
-            
-            # Performance info with statistics
+            # Performance info
             if hasattr(self, '_loop_times') and self._loop_times:
                 current_loop, max_loop, avg_loop = self._get_resource_stats(self._resource_history['loop_times'])
-                
-                perf_text = f"Performance: {current_loop:.0f}ms loop time\nAvg: {avg_loop:.0f}ms | Max: {max_loop:.0f}ms"
-                perf_color = colors['error'] if current_loop > 500 else colors['success']
+                perf_text = f"Performance: {current_loop:.0f}ms | Avg: {avg_loop:.0f}ms | Max: {max_loop:.0f}ms"
+                perf_color = colors['error'] if current_loop > 500 else colors['warning'] if current_loop > 200 else colors['success']
             else:
-                perf_text = "Performance: Not running\nStart automation to see metrics"
+                perf_text = "Performance: Not running - Start automation to see metrics"
                 perf_color = colors['text_light']
             
             self.performance_label.setText(perf_text)
@@ -2836,11 +2841,16 @@ class MainWindow(QtWidgets.QMainWindow):
         self.state_label.setStyleSheet(f'font-weight: bold; font-size: 11pt; color: {colors["accent"]};')
         
         # Update resource labels
-        self.memory_label.setStyleSheet(f'font-size: 9pt; color: {colors["text_light"]};')
-        self.cpu_label.setStyleSheet(f'font-size: 9pt; color: {colors["text_light"]};')
-        self.system_memory_label.setStyleSheet(f'font-size: 9pt; color: {colors["text_light"]};')
+        # System resource labels
+        self.system_cpu_label.setStyleSheet(f'font-size: 9pt; color: {colors["text_light"]};')
+        self.system_ram_label.setStyleSheet(f'font-size: 9pt; color: {colors["text_light"]};')
+        self.system_gpu_label.setStyleSheet(f'font-size: 9pt; color: {colors["text_light"]};')
+        
+        # Program usage labels
+        self.program_cpu_label.setStyleSheet(f'font-size: 9pt; color: {colors["text_light"]};')
+        self.program_ram_label.setStyleSheet(f'font-size: 9pt; color: {colors["text_light"]};')
+        self.program_gpu_label.setStyleSheet(f'font-size: 9pt; color: {colors["text_light"]};')
         self.cache_label.setStyleSheet(f'font-size: 9pt; color: {colors["text_light"]};')
-        self.gpu_label.setStyleSheet(f'font-size: 9pt; color: {colors["text_light"]};')
         self.performance_label.setStyleSheet(f'font-size: 9pt; color: {colors["text_light"]};')
     
     def _get_dialog_stylesheet(self):
@@ -3275,16 +3285,16 @@ class MainWindow(QtWidgets.QMainWindow):
         system_resource_layout.setContentsMargins(6, 6, 6, 6)
 
         # System CPU usage
-        self.cpu_label = QtWidgets.QLabel('CPU: --')
-        system_resource_layout.addWidget(self.cpu_label, 0, 0)
+        self.system_cpu_label = QtWidgets.QLabel('CPU: --')
+        system_resource_layout.addWidget(self.system_cpu_label, 0, 0)
 
-        # System memory
-        self.system_memory_label = QtWidgets.QLabel('System Memory: --')
-        system_resource_layout.addWidget(self.system_memory_label, 0, 1)
+        # System RAM usage
+        self.system_ram_label = QtWidgets.QLabel('RAM: --')
+        system_resource_layout.addWidget(self.system_ram_label, 0, 1)
 
-        # GPU memory info
-        self.gpu_label = QtWidgets.QLabel('GPU: --')
-        system_resource_layout.addWidget(self.gpu_label, 0, 2)
+        # System GPU usage
+        self.system_gpu_label = QtWidgets.QLabel('GPU: --')
+        system_resource_layout.addWidget(self.system_gpu_label, 0, 2)
 
         self.system_resource_group.setLayout(system_resource_layout)
 
@@ -3295,17 +3305,24 @@ class MainWindow(QtWidgets.QMainWindow):
         program_usage_layout.setSpacing(4)
         program_usage_layout.setContentsMargins(6, 6, 6, 6)
 
-        # Program memory usage
-        self.memory_label = QtWidgets.QLabel('Memory: --')
-        program_usage_layout.addWidget(self.memory_label, 0, 0)
+        # Program CPU usage
+        self.program_cpu_label = QtWidgets.QLabel('CPU: --')
+        program_usage_layout.addWidget(self.program_cpu_label, 0, 0)
 
-        # Cache info
+        # Program RAM usage
+        self.program_ram_label = QtWidgets.QLabel('RAM: --')
+        program_usage_layout.addWidget(self.program_ram_label, 0, 1)
+
+        # Program GPU usage / Performance info
+        self.program_gpu_label = QtWidgets.QLabel('GPU: --')
+        program_usage_layout.addWidget(self.program_gpu_label, 0, 2)
+
+        # Additional program metrics (second row)
         self.cache_label = QtWidgets.QLabel('Cache: --')
-        program_usage_layout.addWidget(self.cache_label, 0, 1)
+        program_usage_layout.addWidget(self.cache_label, 1, 0)
 
-        # Performance info
         self.performance_label = QtWidgets.QLabel('Performance: --')
-        program_usage_layout.addWidget(self.performance_label, 0, 2)
+        program_usage_layout.addWidget(self.performance_label, 1, 1, 1, 2)  # Span 2 columns
 
         self.program_usage_group.setLayout(program_usage_layout)
 
